@@ -2,7 +2,7 @@
   "name": "openrouter-maestro",
   "displayName": "OpenRouter Maestro",
   "description": "One extension to run OpenRouter models everywhere: native Copilot Chat provider, Claude Code launcher/config manager, and OpenAI Codex CLI/IDE provider setup. Browse, filter, and apply 500+ models with pricing and capability info.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "husamettinulutas",
   "author": {
     "name": "Hüsamettin Ulutaş",
