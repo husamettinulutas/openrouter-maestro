@@ -198,6 +198,15 @@
           "default": "",
           "description": "Path to the Codex config.toml. Leave empty for the default ~/.codex/config.toml."
         },
+        "openrouterMaestro.maxInputTokensOverride": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "default": null,
+          "description": "Override the maxInputTokens reported to VS Code. Lower values trigger conversation compaction earlier, preventing large request body errors (invalid_json). Leave empty to auto-calculate from model's context window.",
+          "minimum": 8192
+        },
         "openrouterMaestro.logLevel": {
           "type": "string",
           "enum": [

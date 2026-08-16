@@ -102,7 +102,7 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
       name: m.name,
       family: 'OpenRouter Maestro',
       version: '1.0.0',
-      maxInputTokens: m.contextLength || 128000,
+      maxInputTokens: this.calculateMaxInputTokens(m.contextLength, m.maxOutputTokens),
       maxOutputTokens: m.maxOutputTokens || 4096,
       capabilities: {
         imageInput: m.capabilities.vision,
@@ -158,12 +158,18 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
     // Build request body (with model parameters from settings)
     const requestBody = this.buildRequestBody(model.id, formattedMessages, tools, toolChoice);
 
+    // Warn about very large request bodies that may cause invalid_json errors
+    const bodySize = JSON.stringify(requestBody).length;
+    if (bodySize > 1_000_000) {
+      Logger.warn(`Request body is very large: ${(bodySize / 1_000_000).toFixed(1)}MB — consider starting a new chat`);
+    }
+
     // Read retry & timeout settings
     const maxRetries = getConfig<number>('maxRetries', 3);
     const timeoutSeconds = getConfig<number>('requestTimeoutSeconds', 60);
 
     Logger.info(
-      `Sending request to OpenRouter: model=${model.id}, messages=${formattedMessages.length}, tools=${tools?.length || 0}`,
+      `Sending request to OpenRouter: model=${model.id}, messages=${formattedMessages.length}, tools=${tools?.length || 0}, bodySize=${(bodySize / 1024).toFixed(0)}KB`,
     );
 
     try {
@@ -961,6 +967,40 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
   }
 
   // ────────────────────────────────────────────────────────────────────────────
+  // Max input tokens calculation
+  // ────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Calculate the maxInputTokens value to report to VS Code.
+   * Instead of reporting the raw contextLength (which makes VS Code think
+   * compaction is never needed), we subtract maxOutputTokens and apply a
+   * 10% safety margin. This ensures VS Code triggers conversation compaction
+   * before request bodies become too large and cause invalid_json errors.
+   *
+   * Users can override this via the `maxInputTokensOverride` setting.
+   */
+  private calculateMaxInputTokens(
+    contextLength: number | undefined,
+    maxOutputTokens: number | undefined,
+  ): number {
+    // Check for user override first
+    const override = getConfig<number | null>('maxInputTokensOverride', null);
+    if (override !== null && override !== undefined && override > 0) {
+      return override;
+    }
+
+    const ctx = contextLength || 128000;
+    const output = maxOutputTokens || 4096;
+    const netInput = ctx - output;
+    // Apply 10% safety margin
+    const safetyMargin = Math.floor(netInput * 0.10);
+    const result = netInput - safetyMargin;
+
+    // Ensure we return at least a reasonable minimum
+    return Math.max(result, 8192);
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
   // Token counting
   // ────────────────────────────────────────────────────────────────────────────
 
@@ -1006,7 +1046,11 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
       }
     }
 
-    return totalTokens;
+    // Safety multiplier: underestimation causes VS Code to skip compaction,
+    // leading to enormous request bodies and invalid_json errors.
+    // A 20% buffer ensures compaction triggers before requests become too large.
+    const safetyFactor = 1.20;
+    return Math.ceil(totalTokens * safetyFactor);
   }
 
   /**
