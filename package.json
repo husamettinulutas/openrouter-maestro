@@ -1,0 +1,234 @@
+{
+  "name": "openrouter-maestro",
+  "displayName": "OpenRouter Maestro",
+  "description": "One extension to run OpenRouter models everywhere: native Copilot Chat provider, Claude Code launcher/config manager, and OpenAI Codex CLI/IDE provider setup. Browse, filter, and apply 500+ models with pricing and capability info.",
+  "version": "1.0.0",
+  "publisher": "husamettinulutas",
+  "author": {
+    "name": "Hüsamettin Ulutaş",
+    "url": "https://github.com/husamettinulutas"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/husamettinulutas/openrouter-maestro.git"
+  },
+  "homepage": "https://github.com/husamettinulutas/openrouter-maestro#readme",
+  "bugs": {
+    "url": "https://github.com/husamettinulutas/openrouter-maestro/issues"
+  },
+  "license": "MIT",
+  "icon": "resources/icon.png",
+  "galleryBanner": {
+    "color": "#0D1117",
+    "theme": "dark"
+  },
+  "engines": {
+    "vscode": "^1.104.0"
+  },
+  "categories": [
+    "AI",
+    "Chat",
+    "Other"
+  ],
+  "keywords": [
+    "openrouter",
+    "copilot",
+    "claude code",
+    "codex",
+    "ai",
+    "language model",
+    "chat",
+    "llm",
+    "model manager",
+    "agent"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "languageModelChatProviders": [
+      {
+        "vendor": "openrouter-maestro",
+        "displayName": "OpenRouter Maestro"
+      }
+    ],
+    "commands": [
+      {
+        "command": "openrouterMaestro.openBrowser",
+        "title": "OpenRouter Maestro: Browse Models",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "openrouterMaestro.setApiKey",
+        "title": "OpenRouter Maestro: Set API Key",
+        "icon": "$(key)"
+      },
+      {
+        "command": "openrouterMaestro.syncModels",
+        "title": "OpenRouter Maestro: Sync Models from API",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "openrouterMaestro.claudeCode.apply",
+        "title": "OpenRouter Maestro: Use Model in Claude Code",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "openrouterMaestro.claudeCode.restore",
+        "title": "OpenRouter Maestro: Restore Claude Code Defaults (Anthropic)",
+        "icon": "$(discard)"
+      },
+      {
+        "command": "openrouterMaestro.codex.apply",
+        "title": "OpenRouter Maestro: Use Model in Codex",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "openrouterMaestro.codex.restore",
+        "title": "OpenRouter Maestro: Restore Codex Defaults (OpenAI)",
+        "icon": "$(discard)"
+      },
+      {
+        "command": "openrouterMaestro.showStatus",
+        "title": "OpenRouter Maestro: Show Integration Status",
+        "icon": "$(info)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "openrouter-maestro-explorer",
+          "title": "OpenRouter Maestro",
+          "icon": "resources/activity-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "openrouter-maestro-explorer": [
+        {
+          "id": "openrouter-maestro-browse",
+          "name": "Model Browser",
+          "type": "webview"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "openrouterMaestro.syncModels",
+          "when": "view == openrouter-maestro-browse",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "OpenRouter Maestro",
+      "properties": {
+        "openrouterMaestro.cache.ttlMinutes": {
+          "type": "number",
+          "default": 60,
+          "description": "How many minutes before the model cache is considered stale and automatically refreshed.",
+          "minimum": 1
+        },
+        "openrouterMaestro.requestTimeoutSeconds": {
+          "type": "number",
+          "default": 60,
+          "description": "Maximum time in seconds to wait for a response from OpenRouter before timing out.",
+          "minimum": 10,
+          "maximum": 300
+        },
+        "openrouterMaestro.maxRetries": {
+          "type": "number",
+          "default": 3,
+          "description": "Maximum number of retry attempts for failed requests (rate limits, server errors).",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "openrouterMaestro.defaultTemperature": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "default": null,
+          "description": "Default temperature for model responses (0.0 = deterministic, 2.0 = creative). Leave empty to use model default.",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "openrouterMaestro.defaultMaxTokens": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "default": null,
+          "description": "Default maximum output tokens. Leave empty to use model default.",
+          "minimum": 1
+        },
+        "openrouterMaestro.apiEndpoint": {
+          "type": "string",
+          "default": "https://openrouter.ai/api/v1",
+          "description": "OpenRouter API base URL. Change this if using a self-hosted proxy or custom endpoint."
+        },
+        "openrouterMaestro.enablePromptCaching": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable OpenRouter automatic prompt caching (cache_control). Dramatically reduces input token costs for Anthropic models in agent mode; ignored by providers that cache automatically."
+        },
+        "openrouterMaestro.sanitizeBase64Content": {
+          "type": "boolean",
+          "default": true,
+          "description": "Strip long base64-like blobs from outgoing prompt text before sending. Prevents OpenRouter organization guardrails from blocking requests with 'prompt injection patterns detected' (base64_encoded_injection) and saves tokens. Image attachments are never affected. Disable if you need the model to analyze raw base64 content."
+        },
+        "openrouterMaestro.claudeCode.settingsScope": {
+          "type": "string",
+          "enum": [
+            "user",
+            "project"
+          ],
+          "default": "user",
+          "description": "Where to write Claude Code environment settings: 'user' (~/.claude/settings.json, applies everywhere) or 'project' (.claude/settings.local.json in the current workspace only)."
+        },
+        "openrouterMaestro.claudeCode.smallFastModel": {
+          "type": "string",
+          "default": "",
+          "description": "OpenRouter model ID to use for Claude Code background/haiku-class tasks (ANTHROPIC_SMALL_FAST_MODEL). Leave empty to use the same model as the main one."
+        },
+        "openrouterMaestro.codex.configPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the Codex config.toml. Leave empty for the default ~/.codex/config.toml."
+        },
+        "openrouterMaestro.logLevel": {
+          "type": "string",
+          "enum": [
+            "debug",
+            "info",
+            "warn",
+            "error"
+          ],
+          "default": "info",
+          "description": "Minimum log level for the OpenRouter Maestro output channel.",
+          "enumDescriptions": [
+            "Show all messages including debug details",
+            "Show informational messages and above",
+            "Show warnings and errors only",
+            "Show errors only"
+          ]
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.js --production",
+    "compile": "tsc --noEmit",
+    "watch": "node esbuild.js --watch",
+    "package": "npx @vscode/vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.104.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.5.0"
+  }
+}

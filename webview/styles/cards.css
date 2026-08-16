@@ -1,0 +1,445 @@
+/* ===== MODEL CARD ===== */
+.model-card {
+  position: relative;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  transition: all var(--transition-base);
+  animation: fadeIn var(--transition-base) both;
+  overflow: hidden;
+}
+
+.model-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--gradient-blue);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.model-card:hover {
+  border-color: var(--text-muted);
+  box-shadow: var(--shadow-md);
+}
+.model-card:hover::before { opacity: 1; }
+
+.model-card.selected {
+  border-color: var(--accent-green);
+  background: linear-gradient(135deg, rgba(63, 185, 80, 0.06) 0%, transparent 100%);
+}
+.model-card.selected::before {
+  background: var(--gradient-green);
+  opacity: 1;
+}
+
+/* Card Header */
+.model-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.model-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.model-card-provider {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.model-card-name {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-card-id {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-card-action {
+  flex-shrink: 0;
+}
+
+.btn-add {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: var(--font-size-base);
+  transition: all var(--transition-fast);
+}
+
+.btn-add.added {
+  background: rgba(63, 185, 80, 0.12);
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+  pointer-events: none;
+}
+
+/* Capability Badges */
+.model-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.badge-text {
+  background: rgba(88, 166, 255, 0.12);
+  color: var(--accent-blue);
+  border-color: rgba(88, 166, 255, 0.25);
+}
+
+.badge-vision {
+  background: rgba(188, 140, 255, 0.12);
+  color: var(--accent-purple);
+  border-color: rgba(188, 140, 255, 0.25);
+}
+
+.badge-tools {
+  background: rgba(57, 210, 192, 0.12);
+  color: var(--accent-cyan);
+  border-color: rgba(57, 210, 192, 0.25);
+}
+
+.badge-free {
+  background: rgba(63, 185, 80, 0.12);
+  color: var(--accent-green);
+  border-color: rgba(63, 185, 80, 0.25);
+}
+
+.badge-reasoning {
+  background: rgba(247, 120, 186, 0.12);
+  color: var(--accent-pink);
+  border-color: rgba(247, 120, 186, 0.25);
+}
+
+.badge-image-out {
+  background: rgba(227, 179, 65, 0.12);
+  color: var(--accent-yellow);
+  border-color: rgba(227, 179, 65, 0.25);
+}
+
+/* Pricing Row */
+.model-card-pricing {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  margin-bottom: var(--space-2);
+}
+
+.price-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+}
+
+.price-label {
+  color: var(--text-muted);
+}
+
+.price-value {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--accent-orange);
+}
+
+.price-value.free {
+  color: var(--accent-green);
+}
+
+/* Stats Row */
+.model-card-stats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-secondary);
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.stat-value {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+/* Description (collapsible) */
+.model-card-desc {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-secondary);
+}
+
+.model-card-desc-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  padding: 0;
+  font-family: var(--font-sans);
+}
+.model-card-desc-toggle:hover { color: var(--text-secondary); }
+
+.model-card-desc-text {
+  margin-top: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.6;
+  display: none;
+  max-height: 100px;
+  overflow: hidden;
+}
+.model-card-desc-text.open { display: block; }
+
+/* ── Agent identity badges ───────────────────────────────────────────────── */
+.badge-copilot {
+  background: rgba(88, 166, 255, 0.15);
+  border-color: var(--accent-copilot) !important;
+}
+
+.badge-claude {
+  background: rgba(255, 140, 66, 0.15);
+  border-color: var(--accent-claude) !important;
+}
+
+.badge-codex {
+  background: rgba(63, 185, 80, 0.15);
+  border-color: var(--accent-codex) !important;
+}
+
+/* ── Agent status cards (Agents tab) ─────────────────────────────────────── */
+.agent-card {
+  border-left: 3px solid var(--border-primary);
+}
+
+.agent-card.agent-claude-code {
+  border-left-color: var(--accent-claude);
+}
+
+.agent-card.agent-codex {
+  border-left-color: var(--accent-codex);
+}
+
+/* ── Card target buttons (Copilot / Claude Code / Codex) ─────────────────── */
+.card-targets {
+  display: flex;
+  gap: 6px;
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-secondary);
+}
+
+.target-btn {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-primary);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all var(--transition-fast);
+}
+
+.target-btn:hover { transform: translateY(-1px); color: var(--text-primary); }
+
+.target-copilot:hover { border-color: var(--accent-copilot); background: rgba(88, 166, 255, 0.12); }
+.target-claude:hover  { border-color: var(--accent-claude);  background: rgba(255, 140, 66, 0.12); }
+.target-codex:hover   { border-color: var(--accent-codex);   background: rgba(63, 185, 80, 0.12); }
+
+.target-copilot.active {
+  border-color: var(--accent-copilot);
+  background: rgba(88, 166, 255, 0.18);
+  color: var(--accent-copilot);
+}
+.target-claude.active {
+  border-color: var(--accent-claude);
+  background: rgba(255, 140, 66, 0.18);
+  color: var(--accent-claude);
+}
+.target-codex.active {
+  border-color: var(--accent-codex);
+  background: rgba(63, 185, 80, 0.18);
+  color: var(--accent-codex);
+}
+
+/* ── Agent detail tabs (Claude Code / Codex) ─────────────────────────────── */
+.agent-note {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  margin-top: var(--space-2);
+  line-height: 1.6;
+}
+
+.agent-note.agent-warn {
+  color: var(--accent-yellow);
+  background: rgba(227, 179, 65, 0.08);
+  border: 1px solid rgba(227, 179, 65, 0.35);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+}
+
+.agent-steps {
+  margin: var(--space-2) 0 0 var(--space-5);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.9;
+}
+
+.agent-active-model {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+}
+
+.agent-active-label {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: var(--space-1);
+}
+
+/* ── "Config changed, agent still running" banner ────────────────────────── */
+.reload-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--accent-yellow);
+  border-radius: var(--radius-md);
+  background: rgba(227, 179, 65, 0.08);
+}
+
+.reload-banner-text {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.reload-banner .btn { flex: none; }
+
+/* ── Saved model list per agent (radio-style, one active) ────────────────── */
+.roster {
+  margin-top: var(--space-4);
+}
+
+.roster-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.roster-title {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.roster-hint {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+/*
+ * Agent lists reuse the Copilot tab's model card verbatim, so a model looks
+ * identical wherever it is listed. Only the header buttons differ, and the
+ * card's green left edge is reserved for the entry that is actually live.
+ */
+.roster-list .active-model-card {
+  border-left-color: var(--border-primary);
+}
+
+.roster-list .active-model-card.card-active {
+  border-left-color: var(--accent-green);
+  background: rgba(63, 185, 80, 0.06);
+}
+
+.card-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Two buttons plus a long model name do not fit a narrow sidebar on one row. */
+.roster-list .active-model-header { flex-wrap: wrap; }
+.roster-list .active-model-details { min-width: 55%; }
+
+.card-state {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--accent-green);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.card-default {
+  border-style: dashed;
+  border-left-style: dashed;
+}
+
+.card-default .active-model-name { color: var(--text-secondary); }

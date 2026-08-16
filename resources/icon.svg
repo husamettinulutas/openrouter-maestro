@@ -1,0 +1,52 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#191A3E"/>
+      <stop offset="0.55" stop-color="#101433"/>
+      <stop offset="1" stop-color="#0A0F24"/>
+    </linearGradient>
+    <radialGradient id="sheen" cx="0.5" cy="0.0" r="1.0">
+      <stop offset="0" stop-color="#8B9CF7" stop-opacity="0.14"/>
+      <stop offset="0.45" stop-color="#8B9CF7" stop-opacity="0.04"/>
+      <stop offset="1" stop-color="#8B9CF7" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="mark" x1="30" y1="64" x2="98" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#58A6FF"/>
+      <stop offset="0.52" stop-color="#BC8CFF"/>
+      <stop offset="1" stop-color="#FDE68A"/>
+    </linearGradient>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="markGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feColorMatrix in="b" type="matrix" values="0 0 0 0 0.45  0 0 0 0 0.45  0 0 0 0 1  0 0 0 0.55 0"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Rounded background -->
+  <rect x="4" y="4" width="120" height="120" rx="30" fill="url(#bg)"/>
+  <rect x="4" y="4" width="120" height="120" rx="30" fill="url(#sheen)"/>
+  <rect x="4.75" y="4.75" width="118.5" height="118.5" rx="29.25" stroke="#FFFFFF" stroke-opacity="0.07" stroke-width="1.5"/>
+
+  <!-- Maestro "M" monogram -->
+  <path d="M 33 92 L 33 44 L 64 74 L 95 44 L 95 92"
+        stroke="url(#mark)" stroke-width="13"
+        stroke-linecap="round" stroke-linejoin="round"
+        fill="none" filter="url(#markGlow)"/>
+
+  <!-- Convergence node at the center vertex -->
+  <circle cx="64" cy="74" r="6" fill="#FFFFFF" filter="url(#glow)"/>
+
+  <!-- Conductor's spark above the right stem -->
+  <path d="M 101 22 L 103.2 28.8 L 110 31 L 103.2 33.2 L 101 40 L 98.8 33.2 L 92 31 L 98.8 28.8 Z"
+        fill="#FDE68A" filter="url(#glow)"/>
+</svg>

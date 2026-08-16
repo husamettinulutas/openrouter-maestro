@@ -1,0 +1,77 @@
+/* ===== DESIGN TOKENS ===== */
+:root {
+  /* Background Colors */
+  --bg-primary:     #0D1117;
+  --bg-secondary:   #161B22;
+  --bg-tertiary:    #21262D;
+  --bg-elevated:    #1C2128;
+  --bg-overlay:     rgba(0, 0, 0, 0.5);
+
+  /* Border Colors */
+  --border-primary:   #30363D;
+  --border-secondary: #21262D;
+  --border-focus:     #58A6FF;
+
+  /* Accent Colors */
+  --accent-blue:    #58A6FF;
+  --accent-green:   #3FB950;
+  --accent-orange:  #D29922;
+  --accent-purple:  #BC8CFF;
+  --accent-red:     #F85149;
+  --accent-cyan:    #39D2C0;
+  --accent-pink:    #F778BA;
+  --accent-yellow:  #E3B341;
+
+  /* Text Colors */
+  --text-primary:   #F0F6FC;
+  --text-secondary: #8B949E;
+  --text-muted:     #6E7681;
+  --text-link:      #58A6FF;
+  --text-on-accent: #FFFFFF;
+
+  /* Agent identity colors (match the extension icon streams) */
+  --accent-copilot: #58A6FF;
+  --accent-claude:  #FF8C42;
+  --accent-codex:   #3FB950;
+
+  /* Gradients */
+  --gradient-blue:   linear-gradient(135deg, #58A6FF 0%, #388BFD 100%);
+  --gradient-green:  linear-gradient(135deg, #3FB950 0%, #2EA043 100%);
+  --gradient-purple: linear-gradient(135deg, #BC8CFF 0%, #8957E5 100%);
+  --gradient-brand:  linear-gradient(90deg, #58A6FF 0%, #BC8CFF 55%, #FDE68A 100%);
+
+  /* Shadows */
+  --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md:  0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg:  0 8px 24px rgba(0, 0, 0, 0.5);
+
+  /* Typography (Increased base sizes for better legibility) */
+  --font-sans:  'Segoe UI', -apple-system, BlinkMacSystemFont, 'Inter', 'Roboto', sans-serif;
+  --font-mono:  'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+
+  --font-size-xs:   0.75rem;    /* 12px */
+  --font-size-sm:   0.8125rem;  /* 13px */
+  --font-size-base: 0.875rem;   /* 14px */
+  --font-size-md:   0.9375rem;  /* 15px */
+  --font-size-lg:   1.125rem;   /* 18px */
+  --font-size-xl:   1.375rem;   /* 22px */
+  --font-size-2xl:  1.625rem;   /* 26px */
+
+  /* Spacing */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+
+  /* Border Radius */
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
+}

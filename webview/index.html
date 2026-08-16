@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src {{cspSource}} 'unsafe-inline'; script-src {{cspSource}} 'unsafe-inline'; font-src {{cspSource}};">
+  <title>OpenRouter Maestro</title>
+  <link rel="stylesheet" href="{{variablesCssUri}}">
+  <link rel="stylesheet" href="{{mainCssUri}}">
+  <link rel="stylesheet" href="{{cardsCssUri}}">
+  <link rel="stylesheet" href="{{animationsCssUri}}">
+</head>
+<body>
+  <div class="app">
+
+    <!-- API Key Banner (shown when no key is set) -->
+    <div class="api-key-banner" id="apikey-banner" style="display:none;">
+      <span class="api-key-banner-icon">🔑</span>
+      <span class="api-key-banner-text">API key not set. Set your OpenRouter API key to browse and add models.</span>
+      <button class="btn btn-sm" id="apikey-banner-btn">Set Key</button>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-left">
+        <svg class="header-logo" width="22" height="22" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="logoMark" x1="30" y1="64" x2="98" y2="64" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#58A6FF"/>
+              <stop offset="0.52" stop-color="#BC8CFF"/>
+              <stop offset="1" stop-color="#FDE68A"/>
+            </linearGradient>
+          </defs>
+          <path d="M 22 104 L 22 34 L 64 76 L 106 34 L 106 104"
+                stroke="url(#logoMark)" stroke-width="17"
+                stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <circle cx="64" cy="76" r="9" fill="#FFFFFF"/>
+          <path d="M 111 4 L 114.4 14.6 L 125 18 L 114.4 21.4 L 111 32 L 107.6 21.4 L 97 18 L 107.6 14.6 Z" fill="#FDE68A"/>
+        </svg>
+        <span class="header-title">OpenRouter Maestro</span>
+      </div>
+      <div class="header-actions">
+        <button class="btn-icon" id="apikey-btn" title="Set API Key">🔑</button>
+        <button class="btn-icon" id="sync-btn" title="Sync models from OpenRouter">🔄</button>
+      </div>
+    </div>
+
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tab-browse">🌐 Browse</button>
+      <button class="tab-btn tab-copilot" id="tab-copilot">
+        Copilot
+        <span class="tab-badge" id="copilot-count">0</span>
+      </button>
+      <button class="tab-btn tab-claude" id="tab-claude">
+        Claude Code
+        <span class="tab-badge" id="claude-count">0</span>
+      </button>
+      <button class="tab-btn tab-codex" id="tab-codex">
+        Codex
+        <span class="tab-badge" id="codex-count">0</span>
+      </button>
+    </div>
+
+    <!-- TAB 1: BROWSE MODELS -->
+    <div class="tab-content active" id="tab-content-browse">
+      <!-- Search -->
+      <div class="search-section">
+        <div class="search-wrapper">
+          <span class="search-icon">🔍</span>
+          <input
+            type="text"
+            class="search-input"
+            id="search-input"
+            placeholder="Search models by name, provider, or ID..."
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button class="search-clear" id="search-clear" title="Clear search">✕</button>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="filter-bar">
+        <button class="filter-chip vision" id="filter-vision">
+          <span class="filter-chip-icon">👁️</span> Vision
+        </button>
+        <button class="filter-chip tools" id="filter-tools">
+          <span class="filter-chip-icon">🔧</span> Tools
+        </button>
+        <button class="filter-chip free" id="filter-free">
+          <span class="filter-chip-icon">✨</span> Free
+        </button>
+
+        <span class="filter-separator"></span>
+
+        <div class="provider-dropdown">
+          <button class="filter-chip" id="provider-filter-btn">🏢 Provider</button>
+          <div class="provider-dropdown-menu" id="provider-menu"></div>
+        </div>
+
+        <span class="filter-separator"></span>
+
+        <select class="sort-select" id="sort-select">
+          <option value="name-asc">Sort: Name A-Z</option>
+          <option value="price-asc">Sort: Price ↑</option>
+          <option value="price-desc">Sort: Price ↓</option>
+          <option value="context-desc">Sort: Context ↓</option>
+          <option value="newest">Sort: Newest</option>
+        </select>
+      </div>
+
+      <!-- Stats Bar -->
+      <div class="stats-bar">
+        <span class="stats-text">
+          Showing <span class="stats-count" id="stats-filtered">0</span>
+          of <span class="stats-count" id="stats-count">0</span> models
+        </span>
+      </div>
+
+      <!-- Model List -->
+      <div class="model-list-container" id="model-list-container">
+        <div class="model-list stagger-children" id="model-list">
+          <div class="empty-state">
+            <div class="empty-state-icon">⚡</div>
+            <div class="empty-state-title">Welcome!</div>
+            <div class="empty-state-desc">Set your API key and sync models to get started.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: COPILOT -->
+    <div class="tab-content" id="tab-content-copilot">
+      <div style="margin-bottom: var(--space-3); font-size: var(--font-size-sm); color: var(--text-muted);">
+        Models available in the Copilot Chat model picker under <b>OpenRouter Maestro</b>.
+        You can enable as many as you like from the <b>Browse</b> tab.
+      </div>
+      <div id="copilot-models-list">
+        <div class="empty-state">
+          <div class="empty-state-icon">🔵</div>
+          <div class="empty-state-title">No models in Copilot yet</div>
+          <div class="empty-state-desc">In the Browse tab, press a model card's <b>Copilot</b> button to add it.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: CLAUDE CODE -->
+    <div class="tab-content" id="tab-content-claude">
+      <div id="claude-agent-card">
+        <div class="empty-state">
+          <div class="empty-state-icon">🟠</div>
+          <div class="empty-state-title">Checking Claude Code…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: CODEX -->
+    <div class="tab-content" id="tab-content-codex">
+      <div id="codex-agent-card">
+        <div class="empty-state">
+          <div class="empty-state-icon">🟢</div>
+          <div class="empty-state-title">Checking Codex…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Fetching models from OpenRouter...</div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+  </div>
+
+  <script src="{{vscodeApiJsUri}}"></script>
+  <script src="{{filtersJsUri}}"></script>
+  <script src="{{appJsUri}}"></script>
+</body>
+</html>
