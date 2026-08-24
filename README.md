@@ -56,6 +56,8 @@ Each agent then gets its own tab, and every tab shows the same card: capabilitie
 
 They show up in the Copilot Chat model picker under **OpenRouter Maestro** immediately — no reload, no config file.
 
+Reasoning models also get a **Thinking Effort** submenu right in the Copilot model picker, so you can dial the reasoning depth per request. The Copilot tab's card carries the same control as a per-model default, and `openrouterMaestro.defaultReasoningEffort` sets a global fallback.
+
 ### Claude Code — a saved list, one model live
 
 <img src="https://raw.githubusercontent.com/husamettinulutas/openrouter-maestro/HEAD/media/claude-code.png" width="820" alt="The Claude Code tab with a saved model list, one active and the rest waiting" />
@@ -167,6 +169,7 @@ VS Code's built-in BYOK has included OpenRouter since 2026, but it hides `:free`
 | `openrouterMaestro.codex.configPath` | *(empty)* | Override for `~/.codex/config.toml` |
 | `openrouterMaestro.enablePromptCaching` | `true` | `cache_control` prompt caching for Copilot requests |
 | `openrouterMaestro.sanitizeBase64Content` | `true` | Strip long base64 blobs to avoid guardrail 403s |
+| `openrouterMaestro.defaultReasoningEffort` | *(catalog default)* | Fallback thinking effort (`none`/`minimal`/`low`/`medium`/`high`/`xhigh`/`max`); the Copilot picker overrides it per session |
 | `openrouterMaestro.defaultTemperature` / `defaultMaxTokens` | *(model default)* | Copilot request parameters |
 | `openrouterMaestro.requestTimeoutSeconds` / `maxRetries` | `60` / `3` | Copilot request resilience |
 | `openrouterMaestro.cache.ttlMinutes` | `60` | Model-list cache TTL |
@@ -189,6 +192,10 @@ Requires VS Code **1.104+** (the release where the language-model provider API w
 Issues and pull requests are welcome at [github.com/husamettinulutas/openrouter-maestro](https://github.com/husamettinulutas/openrouter-maestro). Bug reports are most useful with the agent involved, its version, and the relevant lines from the **OpenRouter Maestro** output channel.
 
 Successor to [openrouter-copilot-model-manager](https://github.com/husamettinulutas/openrouter-copilot-model-manager), extended from Copilot-only to all three agents.
+
+## Credits
+
+The Copilot model-picker **Thinking Effort** integration was adapted from [@Irvingouj](https://github.com/Irvingouj)'s fork of the predecessor project ([`c2dc1de`](https://github.com/Irvingouj/openrouter-copilot-model-manager/commit/c2dc1de61a44ee6504f9c3d2de21b81f3cc1cbc6)), with the model-id heuristic removed and without enabling proposed APIs, so this build stays installable from the Marketplace on stable VS Code.
 
 ## License
 

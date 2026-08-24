@@ -4,6 +4,7 @@ import { OpenRouterModel, OpenRouterModelsResponse, ProcessedModel } from '../ty
 import { Logger } from '../utils/logger';
 import { normalizeApiKey } from '../utils/apiKeyUtils';
 import { getAttributionHeaders } from '../utils/branding';
+import { parseModelReasoning } from '../utils/reasoningEffort';
 
 const DEFAULT_BASE_URL = 'https://openrouter.ai/api/v1';
 
@@ -148,6 +149,7 @@ export class OpenRouterClient {
       const inputModalities = raw.architecture?.input_modalities || ['text'];
       const outputModalities = raw.architecture?.output_modalities || ['text'];
       const supportedParams = raw.supported_parameters || [];
+      const reasoning = parseModelReasoning(raw);
 
       return {
         id: raw.id,
@@ -167,10 +169,9 @@ export class OpenRouterClient {
           vision: inputModalities.includes('image'),
           toolCalling: supportedParams.includes('tools') || supportedParams.includes('tool_choice'),
           imageOutput: outputModalities.includes('image'),
-          reasoning: supportedParams.includes('reasoning') ||
-                     raw.id.includes('thinking') ||
-                     raw.id.includes('reasoner'),
+          reasoning: !!reasoning,
         },
+        reasoning,
         supportedParameters: supportedParams,
         isFree: promptCost === 0 && completionCost === 0,
         createdAt: raw.created,

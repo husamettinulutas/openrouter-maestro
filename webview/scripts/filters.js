@@ -8,6 +8,7 @@ const Filters = (function() {
     vision: false,
     toolCalling: false,
     free: false,
+    reasoning: false,
     sortBy: 'name-asc',
     provider: '',
   };
@@ -38,6 +39,9 @@ const Filters = (function() {
     }
     if (currentFilters.free) {
       result = result.filter(m => m.isFree);
+    }
+    if (currentFilters.reasoning) {
+      result = result.filter(m => m.capabilities.reasoning || (m.reasoning && m.reasoning.supportedEfforts));
     }
 
     // Provider filter
@@ -91,6 +95,7 @@ const Filters = (function() {
       vision: false,
       toolCalling: false,
       free: false,
+      reasoning: false,
       sortBy: 'name-asc',
       provider: '',
     };
@@ -104,6 +109,7 @@ const Filters = (function() {
     if (currentFilters.vision) count++;
     if (currentFilters.toolCalling) count++;
     if (currentFilters.free) count++;
+    if (currentFilters.reasoning) count++;
     if (currentFilters.provider) count++;
     return count;
   }

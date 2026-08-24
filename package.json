@@ -2,7 +2,7 @@
   "name": "openrouter-maestro",
   "displayName": "OpenRouter Maestro",
   "description": "One extension to run OpenRouter models everywhere: native Copilot Chat provider, Claude Code launcher/config manager, and OpenAI Codex CLI/IDE provider setup. Browse, filter, and apply 500+ models with pricing and capability info.",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "publisher": "husamettinulutas",
   "author": {
     "name": "Hüsamettin Ulutaş",
@@ -207,6 +207,24 @@
           "description": "Override the maxInputTokens reported to VS Code. Lower values trigger conversation compaction earlier, preventing large request body errors (invalid_json). Leave empty to auto-calculate from model's context window.",
           "minimum": 8192
         },
+        "openrouterMaestro.defaultReasoningEffort": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "enum": [
+            null,
+            "none",
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "description": "Default thinking effort for reasoning models when Copilot has not set one yet. Leave empty to use each model's catalog default. The Copilot model-picker Thinking Effort submenu overrides this per session."
+        },
         "openrouterMaestro.logLevel": {
           "type": "string",
           "enum": [
@@ -232,7 +250,8 @@
     "build": "node esbuild.js --production",
     "compile": "tsc --noEmit",
     "watch": "node esbuild.js --watch",
-    "package": "npx @vscode/vsce package --no-dependencies"
+    "package": "npx @vscode/vsce package --no-dependencies",
+    "test": "npx --yes tsx --test src/__tests__/apiKeyUtils.test.ts src/__tests__/tokenEstimation.test.ts src/__tests__/reasoningEffort.test.ts"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

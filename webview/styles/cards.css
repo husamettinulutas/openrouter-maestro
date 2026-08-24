@@ -443,3 +443,29 @@
 }
 
 .card-default .active-model-name { color: var(--text-secondary); }
+
+.effort-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-secondary);
+}
+
+.effort-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.effort-select {
+  min-width: 140px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-primary);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+}

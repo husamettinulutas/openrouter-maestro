@@ -3,6 +3,17 @@
 All notable changes to **OpenRouter Maestro** are documented here.
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [1.1.0]
+
+- **Thinking effort control for Copilot.** Reasoning models now expose a **Thinking Effort** submenu in the Copilot model picker; the chosen value is sent to OpenRouter as `reasoning.effort`. Previously reasoning output was displayed but never controlled.
+- Per-model effort default on the Copilot tab card, plus a global `openrouterMaestro.defaultReasoningEffort` fallback.
+- New 🧠 **Reasoning** filter chip in the Browse tab.
+- Model-picker tooltips now list each model's real capabilities (tools / vision / thinking efforts).
+- Effort support is read from OpenRouter's catalog metadata only — never guessed from the model id.
+- Model cache version bumped to `2`; the old cache is discarded once so reasoning metadata is picked up.
+
+Adapted from [@Irvingouj](https://github.com/Irvingouj)'s fork of the predecessor project, without enabling proposed APIs.
+
 ## [1.0.0] — First public release
 
 Run any OpenRouter model in **GitHub Copilot Chat**, **Claude Code** and **OpenAI Codex**, from one panel.

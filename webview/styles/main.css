@@ -313,9 +313,10 @@ html, body {
   color: var(--accent-blue);
   background: rgba(88, 166, 255, 0.1);
 }
-.filter-chip.active.vision   { border-color: var(--accent-purple); color: var(--accent-purple); background: rgba(188, 140, 255, 0.1); }
-.filter-chip.active.tools    { border-color: var(--accent-cyan);   color: var(--accent-cyan);   background: rgba(57, 210, 192, 0.1); }
-.filter-chip.active.free     { border-color: var(--accent-green);  color: var(--accent-green);  background: rgba(63, 185, 80, 0.1); }
+.filter-chip.active.vision    { border-color: var(--accent-purple); color: var(--accent-purple); background: rgba(188, 140, 255, 0.1); }
+.filter-chip.active.tools     { border-color: var(--accent-cyan);   color: var(--accent-cyan);   background: rgba(57, 210, 192, 0.1); }
+.filter-chip.active.free      { border-color: var(--accent-green);  color: var(--accent-green);  background: rgba(63, 185, 80, 0.1); }
+.filter-chip.active.reasoning { border-color: var(--accent-orange); color: var(--accent-orange); background: rgba(210, 153, 34, 0.12); }
 
 .filter-separator {
   width: 1px;

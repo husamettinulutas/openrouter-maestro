@@ -4,7 +4,7 @@ import { Logger } from '../utils/logger';
 
 const CACHE_KEY = 'openrouter-model-cache';
 const CACHE_META_KEY = 'openrouter-cache-meta';
-const CACHE_VERSION = '1';
+const CACHE_VERSION = '2';
 
 /**
  * Manages model cache with in-memory and persistent storage.
@@ -35,6 +35,13 @@ export class ModelCache {
    */
   async loadFromDisk(): Promise<ProcessedModel[]> {
     try {
+      const meta = this.getMetadata();
+      if (meta && meta.version !== CACHE_VERSION) {
+        // Older caches predate reasoning metadata; force a refetch.
+        Logger.info(`Ignoring model cache version ${meta.version} (current ${CACHE_VERSION})`);
+        return [];
+      }
+
       const cached = this.globalState.get<ProcessedModel[]>(CACHE_KEY);
       if (cached && Array.isArray(cached) && cached.length > 0) {
         this.inMemoryModels = cached;

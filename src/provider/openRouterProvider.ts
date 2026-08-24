@@ -3,9 +3,13 @@ import * as https from 'https';
 import { ModelCache } from '../cache/modelCache';
 import { SecretsManager } from '../utils/secrets';
 import { Logger } from '../utils/logger';
-import { SelectedModel } from '../types/models';
+import { ProcessedModel, SelectedModel } from '../types/models';
 import { normalizeApiKey } from '../utils/apiKeyUtils';
 import { getAttributionHeaders } from '../utils/branding';
+import {
+  buildThinkingEffortSchema,
+  resolveReasoningEffort,
+} from '../utils/reasoningEffort';
 
 // ─── Configuration helper ────────────────────────────────────────────────────
 
@@ -97,18 +101,36 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
       selected.some((s) => s.id === m.id && s.enabled),
     );
 
-    return activeModels.map((m) => ({
-      id: m.id,
-      name: m.name,
-      family: 'OpenRouter Maestro',
-      version: '1.0.0',
-      maxInputTokens: this.calculateMaxInputTokens(m.contextLength, m.maxOutputTokens),
-      maxOutputTokens: m.maxOutputTokens || 4096,
-      capabilities: {
-        imageInput: m.capabilities.vision,
-        toolCalling: m.capabilities.toolCalling,
-      },
-    }));
+    const globalDefault = getConfig<string | null>('defaultReasoningEffort', null);
+    return activeModels.map((m) => {
+      const selectedEntry = selected.find((s) => s.id === m.id);
+      const effortDefault = selectedEntry?.reasoningEffort || globalDefault || undefined;
+      return {
+        id: m.id,
+        name: m.name,
+        family: 'OpenRouter Maestro',
+        version: '1.0.0',
+        maxInputTokens: this.calculateMaxInputTokens(m.contextLength, m.maxOutputTokens),
+        maxOutputTokens: m.maxOutputTokens || 4096,
+        tooltip: this.buildModelTooltip(m),
+        detail: m.reasoning
+          ? `Thinking · ${effortDefault || m.reasoning.defaultEffort || 'default'}`
+          : undefined,
+        capabilities: {
+          imageInput: m.capabilities.vision,
+          toolCalling: m.capabilities.toolCalling,
+        },
+        isUserSelectable: true,
+        isBYOK: true,
+        // Renders the "Thinking Effort" submenu in the Copilot model picker.
+        // Ungated by VS Code, so no enabledApiProposals entry is needed.
+        ...(m.reasoning
+          ? {
+              configurationSchema: buildThinkingEffortSchema(m.reasoning, effortDefault),
+            }
+          : {}),
+      };
+    });
   }
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -155,8 +177,21 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
     // Build tool definitions
     const { tools, toolChoice } = this.buildToolDefinitions(_options);
 
+    // Resolve thinking effort: Copilot picker → per-model override → global setting → catalog default
+    const selectedModels = this.globalState.get<SelectedModel[]>('openrouter-selected-models') || [];
+    const cachedModel = this.cache.getModel(model.id);
+    const globalDefaultEffort = getConfig<string | null>('defaultReasoningEffort', null);
+    const reasoningEffort = resolveReasoningEffort(
+      cachedModel?.reasoning,
+      {
+        modelConfiguration: _options.modelConfiguration,
+        modelOptions: _options.modelOptions,
+      },
+      selectedModels.find((s) => s.id === model.id)?.reasoningEffort || globalDefaultEffort || undefined,
+    );
+
     // Build request body (with model parameters from settings)
-    const requestBody = this.buildRequestBody(model.id, formattedMessages, tools, toolChoice);
+    const requestBody = this.buildRequestBody(model.id, formattedMessages, tools, toolChoice, reasoningEffort);
 
     // Warn about very large request bodies that may cause invalid_json errors
     const bodySize = JSON.stringify(requestBody).length;
@@ -169,7 +204,7 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
     const timeoutSeconds = getConfig<number>('requestTimeoutSeconds', 60);
 
     Logger.info(
-      `Sending request to OpenRouter: model=${model.id}, messages=${formattedMessages.length}, tools=${tools?.length || 0}, bodySize=${(bodySize / 1024).toFixed(0)}KB`,
+      `Sending request to OpenRouter: model=${model.id}, messages=${formattedMessages.length}, tools=${tools?.length || 0}, bodySize=${(bodySize / 1024).toFixed(0)}KB, effort=${reasoningEffort ?? 'default'}`,
     );
 
     try {
@@ -192,7 +227,7 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
               '\n🛡️ Request blocked by OpenRouter guardrails — retrying once with base64 content removed...\n',
             ),
           );
-          const retryBody = this.buildRequestBody(model.id, cleaned, tools, toolChoice);
+          const retryBody = this.buildRequestBody(model.id, cleaned, tools, toolChoice, reasoningEffort);
           try {
             await this.makeRequestWithRetry(retryBody, apiKey, progress, token, 0, timeoutSeconds);
             return;
@@ -514,6 +549,7 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
     messages: any[],
     tools: any[] | undefined,
     toolChoice: string | undefined,
+    reasoningEffort?: string,
   ): any {
     const body: any = {
       model: modelId,
@@ -522,6 +558,10 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
       // Request usage statistics in the streaming response
       stream_options: { include_usage: true },
     };
+
+    if (reasoningEffort) {
+      body.reasoning = { effort: reasoningEffort };
+    }
 
     // Enable OpenRouter automatic prompt caching. Anthropic models only cache
     // when cache_control is present (otherwise every agent-mode turn re-bills
@@ -964,6 +1004,17 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
     }
 
     return `❌ OpenRouter Error (${statusCode}): ${message}`;
+  }
+
+  /** Model-picker hover text: id plus the capabilities this model actually has. */
+  private buildModelTooltip(m: ProcessedModel): string {
+    const caps: string[] = [];
+    if (m.capabilities.toolCalling) { caps.push('tools'); }
+    if (m.capabilities.vision) { caps.push('vision'); }
+    if (m.reasoning) {
+      caps.push(`thinking (${m.reasoning.supportedEfforts.join('/')})`);
+    }
+    return `${m.name} (${m.id})${caps.length ? ' — ' + caps.join(', ') : ''}`;
   }
 
   // ────────────────────────────────────────────────────────────────────────────

@@ -135,6 +135,9 @@ export class ModelBrowserProvider implements vscode.WebviewViewProvider {
           case 'toggleModel':
             await this.handleToggleModel(webview, message.modelId, message.enabled);
             break;
+          case 'setReasoningEffort':
+            await this.handleSetReasoningEffort(webview, message.modelId, message.effort);
+            break;
           case 'applyToCopilot':
             await this.handleApplyToCopilot(webview);
             break;
@@ -670,6 +673,24 @@ export class ModelBrowserProvider implements vscode.WebviewViewProvider {
     }
   }
 
+  /** Persist a per-model thinking-effort override and refresh the picker. */
+  private async handleSetReasoningEffort(
+    webview: vscode.Webview,
+    modelId: string,
+    effort: string,
+  ): Promise<void> {
+    const selected = this.getSelectedModels();
+    const model = selected.find((m) => m.id === modelId);
+    if (!model) {
+      return;
+    }
+    model.reasoningEffort = effort;
+    await this.saveSelectedModels(selected);
+    this.chatProvider?.refresh();
+    await this.sendSelectedModels(webview);
+    await this.sendActiveModels(webview);
+  }
+
   /**
    * Enable selected models and refresh native provider.
    * No external config files are written; state is fully managed in extension storage.
@@ -781,6 +802,9 @@ export class ModelBrowserProvider implements vscode.WebviewViewProvider {
           vision: full ? full.capabilities.vision : false,
           maxInputTokens: full ? full.contextLength : 128000,
           maxOutputTokens: full ? full.maxOutputTokens : 4096,
+          reasoningEffort: s.reasoningEffort || full?.reasoning?.defaultEffort,
+          supportedEfforts: full?.reasoning?.supportedEfforts,
+          reasoningMandatory: full?.reasoning?.mandatory,
         };
       });
 
