@@ -2,7 +2,7 @@
   "name": "openrouter-maestro",
   "displayName": "OpenRouter Maestro",
   "description": "One extension to run OpenRouter models everywhere: native Copilot Chat provider, Claude Code launcher/config manager, and OpenAI Codex CLI/IDE provider setup. Browse, filter, and apply 500+ models with pricing and capability info.",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "publisher": "husamettinulutas",
   "author": {
     "name": "Hüsamettin Ulutaş",
@@ -187,6 +187,18 @@
           ],
           "default": "user",
           "description": "Where to write Claude Code environment settings: 'user' (~/.claude/settings.json, applies everywhere) or 'project' (.claude/settings.local.json in the current workspace only)."
+        },
+        "openrouterMaestro.enableStreamUsage": {
+          "type": "boolean",
+          "default": true,
+          "description": "Ask OpenRouter for token usage statistics in the streaming response (stream_options.include_usage). Disable if a provider rejects the request with an invalid_json or unrecognized-field error."
+        },
+        "openrouterMaestro.claudeCode.maxOutputTokens": {
+          "type": "number",
+          "default": 32000,
+          "description": "Upper limit for CLAUDE_CODE_MAX_OUTPUT_TOKENS. OpenRouter reserves max_tokens × completion price up front, so a high value returns HTTP 402 ('insufficient credits') on a low balance before any tokens are spent. Lower this if Claude Code keeps hitting 402.",
+          "minimum": 1024,
+          "maximum": 200000
         },
         "openrouterMaestro.claudeCode.smallFastModel": {
           "type": "string",

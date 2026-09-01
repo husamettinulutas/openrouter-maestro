@@ -216,12 +216,16 @@ export class ClaudeCodeIntegration implements AgentIntegration {
     // OpenRouter's pre-flight check rejects with 402 when
     // max_tokens × completion price exceeds the remaining balance — long
     // before any tokens are spent. Cap the reservation to the model's real
-    // output limit (max 32k) so low balances behave like Copilot/Codex.
-    if (options?.maxOutputTokens && options.maxOutputTokens > 0) {
-      env.CLAUDE_CODE_MAX_OUTPUT_TOKENS = String(Math.min(options.maxOutputTokens, 32_000));
-    } else {
-      env.CLAUDE_CODE_MAX_OUTPUT_TOKENS = '32000';
-    }
+    // output limit so low balances behave like Copilot/Codex. Users on a small
+    // balance or an expensive model can lower the ceiling further in settings.
+    const outputCeiling = vscode.workspace
+      .getConfiguration('openrouterMaestro')
+      .get<number>('claudeCode.maxOutputTokens', 32_000) || 32_000;
+    env.CLAUDE_CODE_MAX_OUTPUT_TOKENS = String(
+      options?.maxOutputTokens && options.maxOutputTokens > 0
+        ? Math.min(options.maxOutputTokens, outputCeiling)
+        : outputCeiling,
+    );
     // Attribute this traffic to Maestro's app on the OpenRouter dashboard.
     // Claude Code parses the variable as newline-separated "Name: Value" pairs
     // and merges them into its request headers.

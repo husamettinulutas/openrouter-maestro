@@ -3,6 +3,14 @@
 All notable changes to **OpenRouter Maestro** are documented here.
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [1.1.1]
+
+- **HTTP 402 on a low balance is now recovered automatically.** OpenRouter reserves `max_tokens × completion price` before generating anything, and defaults that reservation to the model's full output limit when no `max_tokens` is sent — so a small balance is rejected before a single token is spent. Copilot requests that hit this now parse the affordable budget out of the 402 body and retry once with a `max_tokens` that fits; the error is only surfaced if that retry also fails.
+- New `openrouterMaestro.claudeCode.maxOutputTokens` setting (default `32000`) to lower the `CLAUDE_CODE_MAX_OUTPUT_TOKENS` ceiling for the same reason — Claude Code cannot refit its own request the way the Copilot provider can.
+- New `openrouterMaestro.enableStreamUsage` setting to turn off `stream_options.include_usage`, which some backend providers reject with an `invalid_json` error.
+- Tool call arguments are validated as JSON before being sent, so a malformed argument string from VS Code can no longer make the whole request body unparseable.
+- `maxInputTokens` is now clamped to 900K. Million-token models previously reported their full window, so VS Code never triggered compaction and request bodies grew until the backend rejected them.
+
 ## [1.1.0]
 
 - **Thinking effort control for Copilot.** Reasoning models now expose a **Thinking Effort** submenu in the Copilot model picker; the chosen value is sent to OpenRouter as `reasoning.effort`. Previously reasoning output was displayed but never controlled.
