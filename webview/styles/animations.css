@@ -1,92 +1,40 @@
-/* ===== ANIMATIONS ===== */
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+/* =====================================================================
+   MOTION — 120–320ms, cubic-bezier(.2,.8,.2,1). Nothing loops forever
+   except the spinners that only exist while something is loading.
+   ===================================================================== */
+@property --spin {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 200deg;
 }
 
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
+@keyframes fadeIn   { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeUp   { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes pop      { from { opacity: 0; transform: translateY(-4px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes toastIn  { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes spin     { to { transform: rotate(360deg); } }
+@keyframes spin-once{ from { transform: rotate(-200deg); } to { transform: rotate(0); } }
+@keyframes shimmer  { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@keyframes ring-in  { from { stroke-dasharray: 0 100; } }
+@keyframes border-spin { from { --spin: 200deg; } to { --spin: 560deg; } }
+@keyframes halo {
+  0%   { box-shadow: 0 0 0 0 color-mix(in oklab, var(--c-live) 55%, transparent); }
+  70%  { box-shadow: 0 0 0 4px color-mix(in oklab, var(--c-live) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent; }
 }
 
-@keyframes slideInRight {
-  from { opacity: 0; transform: translateX(20px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
+.tab-content.active { animation: fadeIn var(--t-base) var(--ease); }
+.model-list.animate-in > .model-card { animation: fadeUp 260ms var(--ease) both; }
+.reload-banner { animation: fadeUp 240ms var(--ease) both; }
+.target-btn.state-live .tb-state { animation: pulse-dot 1.8s var(--ease) 2; }
+@keyframes pulse-dot { 50% { transform: scale(.7); } }
 
-@keyframes slideDown {
-  from { opacity: 0; max-height: 0; }
-  to   { opacity: 1; max-height: 500px; }
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50%      { opacity: 0.5; }
-}
-
-@keyframes shimmer {
-  0%   { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-
-@keyframes bounceIn {
-  0%   { transform: scale(0.3); opacity: 0; }
-  50%  { transform: scale(1.05); }
-  70%  { transform: scale(0.95); }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-@keyframes scaleIn {
-  from { transform: scale(0.95); opacity: 0; }
-  to   { transform: scale(1); opacity: 1; }
-}
-
-@keyframes glow {
-  0%, 100% { box-shadow: 0 0 5px rgba(88, 166, 255, 0.2); }
-  50%      { box-shadow: 0 0 20px rgba(88, 166, 255, 0.4); }
-}
-
-@keyframes ripple {
-  0%   { transform: scale(0); opacity: 0.6; }
-  100% { transform: scale(4); opacity: 0; }
-}
-
-/* Utility animation classes */
-.animate-fade-in     { animation: fadeIn var(--transition-base) both; }
-.animate-fade-in-up  { animation: fadeInUp var(--transition-slow) both; }
-.animate-slide-right { animation: slideInRight var(--transition-base) both; }
-.animate-bounce-in   { animation: bounceIn var(--transition-slow) both; }
-.animate-scale-in    { animation: scaleIn var(--transition-fast) both; }
-.animate-pulse       { animation: pulse 2s infinite; }
-.animate-spin        { animation: spin 1s linear infinite; }
-
-/* Stagger children animations */
-.stagger-children > *:nth-child(1)  { animation-delay: 0ms; }
-.stagger-children > *:nth-child(2)  { animation-delay: 50ms; }
-.stagger-children > *:nth-child(3)  { animation-delay: 100ms; }
-.stagger-children > *:nth-child(4)  { animation-delay: 150ms; }
-.stagger-children > *:nth-child(5)  { animation-delay: 200ms; }
-.stagger-children > *:nth-child(6)  { animation-delay: 250ms; }
-.stagger-children > *:nth-child(7)  { animation-delay: 300ms; }
-.stagger-children > *:nth-child(8)  { animation-delay: 350ms; }
-.stagger-children > *:nth-child(9)  { animation-delay: 400ms; }
-.stagger-children > *:nth-child(10) { animation-delay: 450ms; }
-
-/* Skeleton loading shimmer */
-.skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--bg-tertiary) 25%,
-    var(--bg-elevated) 50%,
-    var(--bg-tertiary) 75%
-  );
-  background-size: 400% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: var(--radius-sm);
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .loading-spinner { animation: none !important; }
 }

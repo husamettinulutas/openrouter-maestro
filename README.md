@@ -44,11 +44,15 @@ code --install-extension husamettinulutas.openrouter-maestro
 ## Quick start
 
 1. Open the **OpenRouter Maestro** icon in the activity bar.
-2. Click 🔑 and paste your OpenRouter API key — get one at [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys). It is stored in VS Code **SecretStorage**, never in a file.
-3. Click 🔄 to sync the catalog, then browse: search, filter by vision / tools / free, sort by price or context length.
+2. Click the **key** icon and paste your OpenRouter API key — get one at [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys). It is stored in VS Code **SecretStorage**, never in a file.
+3. Click the **sync** icon to load the catalog, then browse: search (press `/`), filter by vision / tools / free / reasoning, pick a provider, and sort by name, price, context or release date.
 4. Every model card carries three buttons — **＋ Copilot**, **＋ Claude Code**, **＋ Codex**. Press the ones you want. Each agent keeps its **own saved list**, so adding a model never drops the previous one.
 
-Each agent then gets its own tab, and every tab shows the same card: capabilities, input/output price per million tokens, context window and max output.
+The dock at the top of the panel shows what every agent is running — `3 live`, the active model, `Default` or `Reload` — from any tab. Each agent also has its own tab, and every tab shows the same card: capability chips, input/output price per million tokens, context window and max output.
+
+The panel follows your VS Code theme, light or dark, and works from a narrow sidebar up to a full editor tab.
+
+<img src="https://raw.githubusercontent.com/husamettinulutas/openrouter-maestro/HEAD/media/light.png" width="400" alt="The Claude Code tab in a light VS Code theme, in a narrow sidebar" />
 
 ### Copilot Chat — every listed model is usable at once
 
@@ -62,7 +66,7 @@ Reasoning models also get a **Thinking Effort** submenu right in the Copilot mod
 
 <img src="https://raw.githubusercontent.com/husamettinulutas/openrouter-maestro/HEAD/media/claude-code.png" width="820" alt="The Claude Code tab with a saved model list, one active and the rest waiting" />
 
-Claude Code and Codex can each run **one model at a time**, so keep as many as you like in the list and press **Activate** on the one you want. The green card is the one that is really wired in.
+Claude Code and Codex can each run **one model at a time**, so keep as many as you like in the list and press **Activate** on the one you want. The **Now running** card and the row marked **Active** show the model that is really wired in.
 
 ### Codex — and the way back
 

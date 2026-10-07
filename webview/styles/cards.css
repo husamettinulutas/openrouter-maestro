@@ -1,471 +1,713 @@
-/* ===== MODEL CARD ===== */
+/* =====================================================================
+   CARDS — model cards, agent heroes, rosters, notes, empty states
+   ===================================================================== */
+
+/* ---------- Model list ---------- */
+.model-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+@container views (min-width: 660px) {
+  .model-list { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+}
+
+/* Provider monogram (hue from a hash of the slug, set inline as --h) */
+.mono-chip {
+  display: grid; place-items: center; flex: none;
+  width: 26px; height: 26px; border-radius: 8px;
+  font-size: 10.5px; font-weight: var(--fw-semi); letter-spacing: .01em; line-height: 1;
+  color: hsl(var(--h) 85% 76%);
+  background: linear-gradient(160deg, hsl(var(--h) 70% 55% / .26), hsl(var(--h) 70% 45% / .12));
+  border: 1px solid hsl(var(--h) 70% 62% / .28);
+  box-shadow: var(--hl);
+}
+body.vscode-light .mono-chip {
+  color: hsl(var(--h) 75% 24%);
+  background: linear-gradient(160deg, hsl(var(--h) 75% 50% / .16), hsl(var(--h) 75% 50% / .07));
+  border-color: hsl(var(--h) 60% 40% / .22);
+}
+
+/* ---------- Model card ---------- */
 .model-card {
-  position: relative;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-primary);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
-  transition: all var(--transition-base);
-  animation: fadeIn var(--transition-base) both;
-  overflow: hidden;
+  --agent: var(--c-violet);
+  position: relative; isolation: isolate;
+  padding: 12px 12px 10px;
+  border-radius: var(--r-lg);
+  background: var(--surface-1);
+  border: 1px solid var(--line-soft);
+  box-shadow: var(--elev-1);
+  container-type: inline-size; container-name: card;
+  transition: transform var(--t-base) var(--ease), box-shadow var(--t-base) var(--ease), border-color var(--t-base) var(--ease);
+}
+.model-card:hover { transform: translateY(-1px); border-color: var(--line); box-shadow: var(--elev-2); }
+.model-card.selected { border-color: var(--line); }
+
+/* A model that an agent is actually running gets the one gradient edge + glow. */
+.model-card.is-live { border-color: transparent; }
+.model-card.live-claude { --agent: var(--c-claude); }
+.model-card.live-codex  { --agent: var(--c-codex); }
+.model-card.is-live {
+  background:
+    linear-gradient(var(--surface-1), var(--surface-1)) padding-box,
+    linear-gradient(135deg, var(--agent), color-mix(in oklab, var(--agent) 12%, transparent) 45%, color-mix(in oklab, var(--agent) 45%, transparent)) border-box;
+  box-shadow: var(--elev-1), 0 10px 32px -16px color-mix(in oklab, var(--agent) var(--glow), transparent);
+}
+.model-card.is-live::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(120% 70% at 0% 0%, color-mix(in oklab, var(--agent) var(--tint), transparent), transparent 60%);
 }
 
-.model-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: var(--gradient-blue);
-  opacity: 0;
-  transition: opacity var(--transition-fast);
-}
-
-.model-card:hover {
-  border-color: var(--text-muted);
-  box-shadow: var(--shadow-md);
-}
-.model-card:hover::before { opacity: 1; }
-
-.model-card.selected {
-  border-color: var(--accent-green);
-  background: linear-gradient(135deg, rgba(63, 185, 80, 0.06) 0%, transparent 100%);
-}
-.model-card.selected::before {
-  background: var(--gradient-green);
-  opacity: 1;
-}
-
-/* Card Header */
 .model-card-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-3);
-  margin-bottom: var(--space-3);
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px;
 }
-
-.model-card-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.model-card-provider {
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  font-weight: 600;
-  margin-bottom: 2px;
-}
-
+.model-card-info { min-width: 0; }
 .model-card-name {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--text-primary);
-  line-height: 1.3;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: var(--fs-md); font-weight: var(--fw-semi); line-height: 1.25; color: var(--text);
+  letter-spacing: -.005em;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-
 .model-card-id {
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  margin-top: 3px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin-top: 2px;
+  font-family: var(--mono); font-size: var(--fs-xs); color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Capability chips: same pill as the Browse filter chips, read-only. */
+.model-card-caps { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.caps-row { margin-top: 10px; }
+.cap {
+  --cap: var(--muted);
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 24px; padding: 0 10px 0 8px;
+  border-radius: var(--r-full);
+  border: 1px solid color-mix(in oklab, var(--cap) 30%, var(--line));
+  background: color-mix(in oklab, var(--cap) var(--tint-soft), var(--surface-1));
+  color: var(--text-2);
+  font-size: var(--fs-xs); font-weight: var(--fw-semi); line-height: 1;
   white-space: nowrap;
 }
+.cap .ic { width: 13px; height: 13px; flex: none; color: var(--cap); }
+.cap-vision    { --cap: var(--c-violet); }
+.cap-tools     { --cap: var(--c-tools); }
+.cap-reasoning { --cap: var(--c-pink); }
+.cap-image     { --cap: var(--c-image); }
+body.vscode-high-contrast .cap { background: transparent; border-color: var(--vscode-contrastBorder, currentColor); }
 
-.model-card-action {
-  flex-shrink: 0;
+.free-pill {
+  display: inline-flex; align-items: center;
+  height: 18px; padding: 0 7px;
+  border-radius: var(--r-full);
+  font-size: 10.5px; font-weight: var(--fw-semi); letter-spacing: .02em;
+  color: var(--c-live);
+  background: color-mix(in oklab, var(--c-live) var(--tint), transparent);
+  border: 1px solid color-mix(in oklab, var(--c-live) 38%, transparent);
+}
+.free-pill-lg { height: 20px; padding: 0 9px; font-size: var(--fs-xs); }
+body.vscode-light .free-pill { color: color-mix(in oklab, var(--c-live), #000 25%); }
+
+/* Metric strip: In · Out · Context · Max out */
+.metrics {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 11px;
+  padding: 7px 0;
+  border-radius: var(--r-md);
+  background: var(--well);
+  border: 1px solid var(--line-soft);
+}
+.metric { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 0 9px; }
+.metric + .metric { border-left: 1px solid var(--line-soft); }
+.metric-span2 { grid-column: span 2; }
+.metric-label {
+  font-size: 9.5px; font-weight: var(--fw-semi); letter-spacing: .07em; text-transform: uppercase;
+  color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* Fixed value height: the strip is as tall with two prices as with one "Free". */
+.metric-value {
+  display: flex; align-items: center; height: 20px;
+  font-size: var(--fs-base); font-weight: var(--fw-semi); color: var(--text);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+  line-height: 1.3;
+}
+.metric-value .free-pill { height: 20px; }
+
+/* Log-scaled mini meters (catalog min..max), decorative only. */
+.meter {
+  --m: var(--c-amber);
+  display: block; height: 3px; margin-top: 3px;
+  border-radius: 99px;
+  background: var(--meter-track);
+  overflow: hidden;
+}
+.meter-fill {
+  display: block; height: 100%; border-radius: inherit;
+  background: linear-gradient(90deg, color-mix(in oklab, var(--m) 55%, transparent), var(--m));
+}
+.meter-price   { --m: var(--c-meter-price); }
+.meter-context { --m: var(--c-meter-ctx); }
+.meter-maxOut  { --m: var(--c-meter-out); }
+.unit { font-size: 10.5px; font-weight: var(--fw-reg); color: var(--muted); margin-left: 1px; }
+@container card (max-width: 300px) {
+  .metric { padding: 0 6px; }
+  .metric .unit { display: none; }
+  .metric-label { text-transform: none; letter-spacing: 0; font-size: 10.5px; font-weight: var(--fw-reg); }
 }
 
-.btn-add {
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-md);
-  font-weight: 600;
-  font-size: var(--font-size-base);
-  transition: all var(--transition-fast);
-}
-
-.btn-add.added {
-  background: rgba(63, 185, 80, 0.12);
-  border-color: var(--accent-green);
-  color: var(--accent-green);
-  pointer-events: none;
-}
-
-/* Capability Badges */
-.model-card-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
-  margin-bottom: var(--space-3);
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px var(--space-3);
-  border-radius: var(--radius-full);
-  font-size: var(--font-size-xs);
-  font-weight: 600;
-  border: 1px solid transparent;
-}
-
-.badge-text {
-  background: rgba(88, 166, 255, 0.12);
-  color: var(--accent-blue);
-  border-color: rgba(88, 166, 255, 0.25);
-}
-
-.badge-vision {
-  background: rgba(188, 140, 255, 0.12);
-  color: var(--accent-purple);
-  border-color: rgba(188, 140, 255, 0.25);
-}
-
-.badge-tools {
-  background: rgba(57, 210, 192, 0.12);
-  color: var(--accent-cyan);
-  border-color: rgba(57, 210, 192, 0.25);
-}
-
-.badge-free {
-  background: rgba(63, 185, 80, 0.12);
-  color: var(--accent-green);
-  border-color: rgba(63, 185, 80, 0.25);
-}
-
-.badge-reasoning {
-  background: rgba(247, 120, 186, 0.12);
-  color: var(--accent-pink);
-  border-color: rgba(247, 120, 186, 0.25);
-}
-
-.badge-image-out {
-  background: rgba(227, 179, 65, 0.12);
-  color: var(--accent-yellow);
-  border-color: rgba(227, 179, 65, 0.25);
-}
-
-/* Pricing Row */
-.model-card-pricing {
-  display: flex;
-  align-items: center;
-  gap: var(--space-5);
-  margin-bottom: var(--space-2);
-}
-
-.price-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  font-size: var(--font-size-sm);
-}
-
-.price-label {
-  color: var(--text-muted);
-}
-
-.price-value {
-  font-family: var(--font-mono);
-  font-weight: 600;
-  color: var(--accent-orange);
-}
-
-.price-value.free {
-  color: var(--accent-green);
-}
-
-/* Stats Row */
-.model-card-stats {
-  display: flex;
-  align-items: center;
-  gap: var(--space-5);
-  padding-top: var(--space-2);
-  border-top: 1px solid var(--border-secondary);
-}
-
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  font-size: var(--font-size-sm);
-  color: var(--text-muted);
-}
-
-.stat-value {
-  color: var(--text-secondary);
-  font-weight: 600;
-}
-
-/* Description (collapsible) */
-.model-card-desc {
-  margin-top: var(--space-2);
-  padding-top: var(--space-2);
-  border-top: 1px solid var(--border-secondary);
-}
-
+/* Description disclosure (height transition, no layout jump) */
+.model-card-desc { margin-top: 6px; }
 .model-card-desc-toggle {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: var(--font-size-sm);
-  cursor: pointer;
-  padding: 0;
-  font-family: var(--font-sans);
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 26px; padding: 0 8px 0 3px; margin-left: -3px;
+  border-radius: var(--r-xs);
+  font-size: var(--fs-sm); color: var(--muted);
+  transition: color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
 }
-.model-card-desc-toggle:hover { color: var(--text-secondary); }
-
+.model-card-desc-toggle:hover { color: var(--text); background: var(--surface-2); }
+.desc-arrow { display: inline-flex; transition: transform var(--t-base) var(--ease); }
+.desc-arrow .ic { width: 13px; height: 13px; }
+.desc-open .desc-arrow { transform: rotate(90deg); }
+.model-card-desc-body {
+  display: grid; grid-template-rows: 0fr; opacity: 0;
+  transition: grid-template-rows var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease);
+}
+.desc-open .model-card-desc-body { grid-template-rows: 1fr; opacity: 1; }
 .model-card-desc-text {
-  margin-top: var(--space-2);
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  line-height: 1.6;
-  display: none;
-  max-height: 100px;
-  overflow: hidden;
+  overflow: hidden; min-height: 0;
+  font-size: var(--fs-sm); line-height: 1.55; color: var(--muted);
 }
-.model-card-desc-text.open { display: block; }
+.desc-open .model-card-desc-text { padding: 2px 2px 4px; }
 
-/* ── Agent identity badges ───────────────────────────────────────────────── */
-.badge-copilot {
-  background: rgba(88, 166, 255, 0.15);
-  border-color: var(--accent-copilot) !important;
-}
-
-.badge-claude {
-  background: rgba(255, 140, 66, 0.15);
-  border-color: var(--accent-claude) !important;
-}
-
-.badge-codex {
-  background: rgba(63, 185, 80, 0.15);
-  border-color: var(--accent-codex) !important;
-}
-
-/* ── Agent status cards (Agents tab) ─────────────────────────────────────── */
-.agent-card {
-  border-left: 3px solid var(--border-primary);
-}
-
-.agent-card.agent-claude-code {
-  border-left-color: var(--accent-claude);
-}
-
-.agent-card.agent-codex {
-  border-left-color: var(--accent-codex);
-}
-
-/* ── Card target buttons (Copilot / Claude Code / Codex) ─────────────────── */
+/* Agent toggle group: ＋ add / ✓ in list / ● active */
 .card-targets {
-  display: flex;
-  gap: 6px;
-  margin-top: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--border-secondary);
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px;
+  margin-top: 8px; padding: 3px;
+  border-radius: 11px;
+  background: var(--well);
+  border: 1px solid var(--line-soft);
 }
-
 .target-btn {
-  flex: 1;
-  min-width: 0;
-  padding: 6px 4px;
-  font-size: 11px;
-  font-weight: 600;
-  font-family: var(--font-sans);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-primary);
-  background: var(--bg-tertiary);
-  color: var(--text-secondary);
-  cursor: pointer;
+  --agent: var(--c-copilot);
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  min-width: 0; height: 30px; padding: 0 6px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-size: var(--fs-sm); font-weight: var(--fw-semi);
+  color: var(--muted);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: all var(--transition-fast);
+  transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease),
+              box-shadow var(--t-base) var(--ease), transform var(--t-fast) var(--ease);
+}
+.target-claude { --agent: var(--c-claude); }
+.target-codex  { --agent: var(--c-codex); }
+.target-btn .ic { width: 13px; height: 13px; }
+.target-btn .tb-state { stroke-width: 2.2; }
+.tb-glyph { display: none; }
+.tb-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.tb-long { display: none; }
+.tb-prefix { display: none; }
+.target-btn:active { transform: scale(.96); }
+
+.target-btn.state-add:hover {
+  color: var(--agent);
+  background: color-mix(in oklab, var(--agent) var(--tint-soft), var(--surface-1));
+  border-color: color-mix(in oklab, var(--agent) 35%, transparent);
+}
+.target-btn.state-add .tb-state { color: var(--faint); }
+.target-btn.state-add:hover .tb-state { color: var(--agent); }
+
+.target-btn.state-in {
+  color: var(--agent);
+  background: color-mix(in oklab, var(--agent) var(--tint), var(--surface-1));
+  border-color: color-mix(in oklab, var(--agent) 42%, transparent);
+  box-shadow: var(--hl);
+}
+.target-btn.state-in:hover { background: color-mix(in oklab, var(--agent) calc(var(--tint) + 8%), var(--surface-1)); }
+/* Light theme: agent hues on their own tint need a darker ink for AA text. */
+body.vscode-light .target-btn.state-in,
+body.vscode-light .target-btn.state-add:hover { color: color-mix(in oklab, var(--agent), #000 24%); }
+
+.target-btn.state-live {
+  color: var(--on-accent);
+  background-color: var(--agent);
+  background-image: linear-gradient(180deg, color-mix(in oklab, var(--agent), #fff 12%), var(--agent));
+  border-color: color-mix(in oklab, var(--agent), #fff 20%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .28), 0 4px 16px -5px color-mix(in oklab, var(--agent) var(--glow), transparent);
+}
+.target-btn.state-live .tb-state { width: 10px; height: 10px; }
+/* Light: keep the whole gradient at or below the base hue so white text stays AA. */
+body.vscode-light .target-btn.state-live {
+  background-image: linear-gradient(180deg, var(--agent), color-mix(in oklab, var(--agent), #000 14%));
+  border-color: color-mix(in oklab, var(--agent), #000 10%);
+}
+.target-btn.state-live:hover { filter: brightness(1.06); }
+
+@container card (min-width: 320px) {
+  .tb-long { display: inline; }
+  .tb-short { display: none; }
+}
+@container card (min-width: 380px) {
+  .tb-glyph { display: inline-flex; opacity: .85; }
+  .target-btn { gap: 6px; }
+}
+/* Wide cards: "In Copilot", "In Claude Code", "Running in Claude Code".
+   Segments size to their label so nothing truncates. */
+@container card (min-width: 400px) {
+  .tb-prefix { display: inline; }
+  .card-targets { display: flex; }
+  .target-btn { flex: 1 1 auto; }
+  .target-btn.state-live .tb-glyph,
+  .target-btn.state-in .tb-glyph { display: none; }
 }
 
-.target-btn:hover { transform: translateY(-1px); color: var(--text-primary); }
-
-.target-copilot:hover { border-color: var(--accent-copilot); background: rgba(88, 166, 255, 0.12); }
-.target-claude:hover  { border-color: var(--accent-claude);  background: rgba(255, 140, 66, 0.12); }
-.target-codex:hover   { border-color: var(--accent-codex);   background: rgba(63, 185, 80, 0.12); }
-
-.target-copilot.active {
-  border-color: var(--accent-copilot);
-  background: rgba(88, 166, 255, 0.18);
-  color: var(--accent-copilot);
+.list-cap-note {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 14px 8px 4px; color: var(--muted);
 }
-.target-claude.active {
-  border-color: var(--accent-claude);
-  background: rgba(255, 140, 66, 0.18);
-  color: var(--accent-claude);
+.list-cap-note .ic { width: 14px; height: 14px; }
+
+/* ---------- Agent tab layout ---------- */
+.agent-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 18px; }
+@container views (min-width: 720px) {
+  .agent-layout:not(.copilot-layout) { grid-template-columns: minmax(290px, 360px) minmax(0, 1fr); align-items: start; }
+  .agent-layout:not(.copilot-layout) .agent-col:first-child { position: sticky; top: 12px; }
 }
-.target-codex.active {
-  border-color: var(--accent-codex);
-  background: rgba(63, 185, 80, 0.18);
-  color: var(--accent-codex);
+@container views (min-width: 820px) {
+  .copilot-layout { grid-template-columns: 340px minmax(0, 1fr); align-items: start; }
+  .copilot-layout .agent-col:first-child { position: sticky; top: 12px; }
+  .copilot-layout .agent-col-main > .empty-state { padding-top: 24px; }
 }
 
-/* ── Agent detail tabs (Claude Code / Codex) ─────────────────────────────── */
-.agent-note {
-  font-size: var(--font-size-sm);
-  color: var(--text-muted);
-  margin-top: var(--space-2);
-  line-height: 1.6;
+/* ---------- Hero (agent status) ---------- */
+.hero {
+  --agent: var(--c-copilot);
+  position: relative; isolation: isolate;
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: var(--r-lg);
+  background: var(--surface-1);
+  border: 1px solid var(--line-soft);
+  box-shadow: var(--elev-1);
+}
+.hero-claude { --agent: var(--c-claude); }
+.hero-codex  { --agent: var(--c-codex); }
+.hero::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(130% 90% at 0% 0%, color-mix(in oklab, var(--agent) var(--wash), transparent), transparent 62%);
+}
+.hero.hero-live {
+  border-color: transparent;
+  background:
+    linear-gradient(var(--surface-1), var(--surface-1)) padding-box,
+    linear-gradient(140deg, var(--agent), color-mix(in oklab, var(--agent) 14%, transparent) 42%, color-mix(in oklab, var(--agent) 10%, transparent) 70%, color-mix(in oklab, var(--agent) 55%, transparent)) border-box;
+  box-shadow: var(--elev-1), 0 14px 40px -20px color-mix(in oklab, var(--agent) var(--glow), transparent);
 }
 
-.agent-note.agent-warn {
-  color: var(--accent-yellow);
-  background: rgba(227, 179, 65, 0.08);
-  border: 1px solid rgba(227, 179, 65, 0.35);
-  border-radius: var(--radius-md);
-  padding: var(--space-2) var(--space-3);
+.hero-head { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.hero-glyph {
+  display: grid; place-items: center; flex: none;
+  width: 36px; height: 36px; border-radius: 11px;
+  color: var(--agent);
+  background: color-mix(in oklab, var(--agent) var(--tint), transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--agent) 28%, transparent);
 }
-
-.agent-steps {
-  margin: var(--space-2) 0 0 var(--space-5);
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  line-height: 1.9;
+.hero-glyph .ic { width: 19px; height: 19px; stroke-width: 1.8; }
+.hero-live .hero-glyph {
+  color: var(--on-accent);
+  background: linear-gradient(150deg, color-mix(in oklab, var(--agent), #fff 16%), var(--agent) 60%, color-mix(in oklab, var(--agent), #000 14%));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .3), 0 6px 20px -6px color-mix(in oklab, var(--agent) var(--glow), transparent);
 }
+.hero-title-wrap { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; }
+.hero-title { font-size: var(--fs-lg); font-weight: var(--fw-semi); color: var(--text); line-height: 1.2; letter-spacing: -.01em; }
+.hero-text { margin-top: 10px; font-size: var(--fs-sm); line-height: 1.55; color: var(--muted); }
 
-.agent-active-model {
-  margin-top: var(--space-3);
-  padding: var(--space-3);
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-primary);
-  border-radius: var(--radius-md);
-}
-
-.agent-active-label {
-  font-size: var(--font-size-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  margin-bottom: var(--space-1);
-}
-
-/* ── "Config changed, agent still running" banner ────────────────────────── */
-.reload-banner {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-3);
-  padding: var(--space-3);
-  border: 1px solid var(--accent-yellow);
-  border-radius: var(--radius-md);
-  background: rgba(227, 179, 65, 0.08);
-}
-
-.reload-banner-text {
-  flex: 1;
-  min-width: 0;
-  font-size: var(--font-size-sm);
-  line-height: 1.6;
-  color: var(--text-secondary);
-}
-
-.reload-banner .btn { flex: none; }
-
-/* ── Saved model list per agent (radio-style, one active) ────────────────── */
-.roster {
-  margin-top: var(--space-4);
-}
-
-.roster-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-}
-
-.roster-title {
-  font-size: var(--font-size-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-}
-
-.roster-hint {
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
-}
-
-/*
- * Agent lists reuse the Copilot tab's model card verbatim, so a model looks
- * identical wherever it is listed. Only the header buttons differ, and the
- * card's green left edge is reserved for the entry that is actually live.
- */
-.roster-list .active-model-card {
-  border-left-color: var(--border-primary);
-}
-
-.roster-list .active-model-card.card-active {
-  border-left-color: var(--accent-green);
-  background: rgba(63, 185, 80, 0.06);
-}
-
-.card-actions {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-/* Two buttons plus a long model name do not fit a narrow sidebar on one row. */
-.roster-list .active-model-header { flex-wrap: wrap; }
-.roster-list .active-model-details { min-width: 55%; }
-
-.card-state {
-  font-size: var(--font-size-xs);
-  font-weight: 600;
-  color: var(--accent-green);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+.status-pill, .state-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 20px; padding: 0 8px;
+  border-radius: var(--r-full);
+  font-size: var(--fs-xs); font-weight: var(--fw-semi);
   white-space: nowrap;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  background: var(--surface-2);
+}
+.status-pill .ic, .state-pill .ic { width: 12px; height: 12px; }
+.pill-live {
+  color: var(--c-live);
+  background: color-mix(in oklab, var(--c-live) var(--tint), transparent);
+  border-color: color-mix(in oklab, var(--c-live) 38%, transparent);
+}
+.pill-idle { color: var(--text-2); }
+body.vscode-light .pill-live { color: color-mix(in oklab, var(--c-live), #000 25%); }
+.state-pill { height: 26px; padding: 0 10px; }
+
+/* Live-model monograms: separate chips (no overlap, letters never clipped). */
+.hero-stack { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 12px; }
+.mono-chip.chip-stack { width: 28px; height: 28px; }
+.mono-chip.chip-more { --h: 220; width: auto; min-width: 28px; padding: 0 6px; color: var(--text-2); background: var(--surface-2); border-color: var(--line); font-variant-numeric: tabular-nums; }
+
+/* "Now running" well with the context ring */
+.now-running {
+  display: flex; align-items: center; gap: 12px;
+  margin-top: 12px; padding: 10px 12px 10px 10px;
+  border-radius: var(--r-md);
+  background: var(--well);
+  border: 1px solid var(--line-soft);
+}
+.now-text { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+.now-label { font-size: 9.5px; font-weight: var(--fw-semi); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.now-name { font-size: 15px; font-weight: var(--fw-semi); color: var(--text); line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.now-sub { font-family: var(--mono); font-size: var(--fs-xs); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.now-metrics {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 6px;
+  margin-top: 3px;
+  font-size: var(--fs-xs); color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.now-metrics b { color: var(--text); font-weight: var(--fw-semi); }
+.nm-item { white-space: nowrap; }
+.nm-sep { color: var(--muted); }
+@container views (max-width: 360px) {
+  .nm-sep-last { display: none; }
+  .nm-last { flex-basis: 100%; }
+}
+.hero:not(.hero-live) .now-name { font-size: var(--fs-md); white-space: normal; }
+.hero:not(.hero-live) .now-sub { font-family: var(--font); white-space: normal; }
+
+.ring { position: relative; width: 54px; height: 54px; flex: none; }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
+.ring-track { fill: none; stroke: var(--line); stroke-width: 3.2; }
+.ring-arc {
+  fill: none; stroke: var(--agent); stroke-width: 3.4; stroke-linecap: round;
+  filter: drop-shadow(0 0 3px color-mix(in oklab, var(--agent) var(--glow), transparent));
+}
+.ring.animate .ring-arc { animation: ring-in 900ms var(--ease) both; }
+.ring-label { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; text-align: center; line-height: 1; color: var(--agent); }
+.ring-label b { font-size: var(--fs-sm); color: var(--text); font-variant-numeric: tabular-nums; }
+.ring-label small { display: block; margin-top: 2px; font-size: 8.5px; font-weight: var(--fw-semi); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.ring-label .ic { width: 18px; height: 18px; }
+.ring-empty .ring-track { stroke-dasharray: 2 3.24; }
+
+.config-path {
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 10px;
+  font-family: var(--mono); font-size: var(--fs-xs); color: var(--muted);
+}
+.config-path .ic { width: 13px; height: 13px; flex: none; }
+.config-path span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- Notes ---------- */
+.note {
+  display: flex; align-items: flex-start; gap: 9px;
+  margin-top: 10px; padding: 9px 11px;
+  border-radius: var(--r-md);
+  font-size: var(--fs-sm); line-height: 1.5; color: var(--text-2);
+  background: var(--surface-1);
+  border: 1px solid var(--line-soft);
+}
+.note > .ic { width: 15px; height: 15px; margin-top: 1px; flex: none; }
+.note-info > .ic { color: var(--c-copilot); }
+.note-warn > .ic { color: var(--c-amber); }
+.note-warn { background: color-mix(in oklab, var(--c-amber) var(--tint-soft), var(--surface-1)); border-color: color-mix(in oklab, var(--c-amber) 26%, transparent); }
+.hero .note { background: color-mix(in oklab, var(--surface-1) 60%, transparent); }
+.hero .note-warn { background: color-mix(in oklab, var(--c-amber) var(--tint-soft), transparent); }
+
+.note-disclosure { display: block; padding: 0; }
+.note-disclosure summary {
+  display: flex; align-items: center; gap: 9px;
+  min-height: 36px; padding: 8px 11px;
+  list-style: none; cursor: pointer;
+  font-weight: var(--fw-semi); color: var(--text);
+  border-radius: inherit;
+}
+.note-disclosure summary::-webkit-details-marker { display: none; }
+.note-disclosure summary > .ic:first-child { width: 15px; height: 15px; color: var(--c-pink); }
+.note-disclosure summary span { flex: 1; min-width: 0; }
+.disc-chev { width: 14px !important; height: 14px !important; color: var(--muted); transition: transform var(--t-base) var(--ease); }
+.note-disclosure[open] .disc-chev { transform: rotate(180deg); }
+.disclosure-body { padding: 0 12px 11px 35px; color: var(--muted); }
+
+/* ---------- Guide (how it works) ---------- */
+.guide-wrap { margin-top: 18px; }
+.guide {
+  padding: 13px 14px 14px;
+  border-radius: var(--r-lg);
+  background: var(--surface-1);
+  border: 1px solid var(--line-soft);
+  box-shadow: var(--elev-1);
+}
+.guide-how { font-size: var(--fs-sm); line-height: 1.55; color: var(--muted); }
+.agent-steps { list-style: none; display: grid; gap: 9px; margin-top: 12px; counter-reset: s; }
+.agent-steps li { display: flex; gap: 10px; font-size: var(--fs-sm); line-height: 1.5; color: var(--text-2); }
+.step-num {
+  display: grid; place-items: center; flex: none;
+  width: 20px; height: 20px; margin-top: -1px; border-radius: 50%;
+  font-size: 10.5px; font-weight: var(--fw-semi); font-variant-numeric: tabular-nums;
+  color: var(--c-violet);
+  background: color-mix(in oklab, var(--c-violet) var(--tint), transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--c-violet) 30%, transparent);
+}
+.agent-claude ~ * .step-num, #claude-agent-card .step-num { color: var(--c-claude); background: color-mix(in oklab, var(--c-claude) var(--tint), transparent); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--c-claude) 30%, transparent); }
+#codex-agent-card .step-num { color: var(--c-codex); background: color-mix(in oklab, var(--c-codex) var(--tint), transparent); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--c-codex) 30%, transparent); }
+
+/* ---------- Section heads ---------- */
+.section-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  margin: 20px 2px 9px;
+}
+.section-title { font-size: 10.5px; font-weight: var(--fw-semi); letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+.section-hint { font-size: var(--fs-xs); color: var(--muted); }
+
+/* ---------- Roster rows (shared by Copilot / Claude Code / Codex) ---------- */
+.roster-list { display: grid; gap: 8px; }
+.roster-row {
+  --agent: var(--c-copilot);
+  position: relative; isolation: isolate;
+  padding: 10px 10px 10px 12px;
+  border-radius: var(--r-lg);
+  background: var(--surface-1);
+  border: 1px solid var(--line-soft);
+  box-shadow: var(--elev-1);
+  transition: border-color var(--t-base) var(--ease), box-shadow var(--t-base) var(--ease);
+}
+.roster-row:hover, .roster-row:focus-within { border-color: var(--line); }
+.agent-claude.roster-row { --agent: var(--c-claude); }
+.agent-codex.roster-row  { --agent: var(--c-codex); }
+
+.active-model-header {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px;
+}
+.active-model-details { display: flex; flex-direction: column; min-width: 0; }
+.active-model-name {
+  font-size: 13.5px; font-weight: var(--fw-semi); color: var(--text); line-height: 1.3;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.active-model-id {
+  font-family: var(--mono); font-size: var(--fs-xs); color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.card-actions { display: flex; align-items: center; gap: 4px; }
+
+/* Row anatomy, identical on every agent tab:
+     chip | name / id            | primary | trash
+          | meta line (price, ctx, max out)
+          | capability glyphs
+          | thinking effort (Copilot) */
+.roster-row {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "chip info primary trash"
+    ".    meta meta    meta"
+    ".    caps caps    caps"
+    ".    note note    note";
+  column-gap: 12px; align-items: center;
+}
+.roster-row.no-primary {
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "chip info trash"
+    ".    meta meta"
+    ".    caps caps"
+    ".    note note";
+}
+.row-chip { grid-area: chip; display: flex; }
+.row-info { grid-area: info; }
+.row-primary { grid-area: primary; display: flex; align-items: center; }
+.row-trash { grid-area: trash; display: flex; align-items: center; margin-right: -2px; }
+.row-meta { grid-area: meta; margin-top: 9px; min-width: 0; container-type: inline-size; container-name: card; }
+.metrics.metrics-row { margin-top: 0; }
+.row-caps { grid-area: caps; margin-top: 9px; min-height: 24px; }
+.row-caps:empty { display: none; }
+.row-note { grid-area: note; min-width: 0; }
+
+.meta-line {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 2px 7px; min-width: 0;
+  font-size: var(--fs-xs); color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.meta-item { white-space: nowrap; }
+.meta-item b { color: var(--text-2); font-weight: var(--fw-semi); }
+.meta-item .unit { font-size: inherit; margin-left: 1px; }
+.meta-sep { color: var(--muted); }
+
+/* Active row in Claude Code / Codex: agent bar + wash + gradient edge */
+.roster-row.card-active {
+  border-color: color-mix(in oklab, var(--agent) 45%, var(--line));
+  box-shadow: var(--elev-1), 0 10px 30px -18px color-mix(in oklab, var(--agent) var(--glow), transparent);
+}
+.roster-row.card-active::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(100deg, color-mix(in oklab, var(--agent) var(--tint), transparent), transparent 55%);
+}
+.roster-row.card-active::after {
+  content: ''; position: absolute; left: -1px; top: 12px; bottom: 12px; width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--agent);
+  box-shadow: 0 0 10px color-mix(in oklab, var(--agent) var(--glow), transparent);
 }
 
+/* Default ("ghost") row */
 .card-default {
-  border-style: dashed;
-  border-left-style: dashed;
+  --agent: var(--c-copilot);
+  position: relative;
+  padding: 10px 10px 10px 12px;
+  border-radius: var(--r-lg);
+  border: 1px dashed var(--line-strong);
+  background: transparent;
+}
+#claude-agent-card .card-default { --agent: var(--c-claude); }
+#codex-agent-card .card-default  { --agent: var(--c-codex); }
+.card-default.card-active {
+  border-style: solid;
+  border-color: color-mix(in oklab, var(--agent) 40%, var(--line));
+  background: color-mix(in oklab, var(--agent) var(--tint-soft), transparent);
+}
+.default-glyph {
+  display: grid; place-items: center; flex: none;
+  width: 26px; height: 26px; border-radius: 8px;
+  color: var(--agent);
+  background: color-mix(in oklab, var(--agent) var(--tint), transparent);
+}
+.default-glyph .ic { width: 14px; height: 14px; }
+.card-default .active-model-name { white-space: normal; }
+.default-sub { font-family: var(--font); font-size: var(--fs-xs); white-space: normal; line-height: 1.4; margin-top: 1px; }
+.card-default .card-actions { align-self: center; }
+.roster-empty { margin-top: 10px; }
+
+/* Narrow: the name keeps the full row; Activate / Active moves down to the
+   glyph row, right-aligned. */
+@container views (max-width: 360px) {
+  .roster-row {
+    grid-template-areas:
+      "chip info info    trash"
+      "meta meta meta    meta"
+      "caps caps primary primary"
+      "note note note    note";
+  }
+  .roster-row.no-primary {
+    grid-template-areas:
+      "chip info trash"
+      "meta meta meta"
+      "caps caps caps"
+      "note note note";
+  }
+  .roster-row .row-primary { margin-top: 7px; justify-content: flex-end; }
+  /* The meta line wraps here: drop the dots so none dangles at a line end. */
+  .row-meta { column-gap: 12px; }
+  .row-meta .meta-sep { display: none; }
+  .roster-row .row-caps:empty { display: block; }
 }
 
-.card-default .active-model-name { color: var(--text-secondary); }
-
+/* ---------- Thinking effort (segmented radio) ---------- */
 .effort-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  margin-top: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--border-secondary);
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px;
+  margin-top: 10px;
+}
+.effort-label { display: inline-flex; align-items: center; gap: 5px; font-size: var(--fs-xs); color: var(--muted); }
+.effort-label .ic { width: 13px; height: 13px; color: var(--c-pink); }
+.effort-seg {
+  display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 2px; max-width: 100%;
+  border-radius: 9px;
+  background: var(--well);
+  border: 1px solid var(--line-soft);
+}
+.effort-opt {
+  min-height: 28px; min-width: 44px; padding: 0 10px;
+  border-radius: 7px;
+  font-size: var(--fs-xs); font-weight: var(--fw-semi);
+  color: var(--muted);
+  transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+}
+.effort-opt:hover { color: var(--text); }
+.effort-opt[aria-checked="true"] {
+  color: var(--text);
+  background: var(--surface-3);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .07), 0 1px 3px rgb(0 0 0 / .35), inset 0 -2px 0 color-mix(in oklab, var(--c-pink) 70%, transparent);
+}
+@container views (max-width: 360px) {
+  .effort-row { gap: 6px; }
+  .effort-seg { display: flex; width: 100%; }
+  .effort-opt { flex: 1 1 0; padding: 0 4px; }
+}
+body.vscode-light .effort-opt[aria-checked="true"] { background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / .12), 0 0 0 .5px rgb(0 0 0 / .06), inset 0 -2px 0 color-mix(in oklab, var(--c-pink) 70%, transparent); }
+
+/* ---------- Restart banner ---------- */
+.reload-banner {
+  position: sticky; top: 8px; z-index: 5;
+  margin-top: 12px;
+  padding: 11px 12px;
+  border-radius: var(--r-lg);
+  background:
+    linear-gradient(120deg, color-mix(in oklab, var(--c-amber) calc(var(--tint) + 4%), transparent), transparent 70%),
+    color-mix(in oklab, var(--surface-1) 92%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
+  border: 1px solid color-mix(in oklab, var(--c-amber) 50%, transparent);
+  box-shadow: var(--elev-2), 0 10px 30px -16px color-mix(in oklab, var(--c-amber) var(--glow), transparent);
+}
+.reload-banner-head { display: flex; align-items: flex-start; gap: 10px; }
+.reload-icon {
+  display: grid; place-items: center; flex: none;
+  width: 28px; height: 28px; border-radius: 50%;
+  color: var(--c-amber);
+  background: color-mix(in oklab, var(--c-amber) var(--tint), transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--c-amber) 35%, transparent);
+}
+.reload-icon .ic { width: 15px; height: 15px; animation: spin-once 900ms var(--ease) 1; }
+.reload-banner-copy { display: flex; flex-direction: column; gap: 1px; min-width: 0; font-size: var(--fs-sm); line-height: 1.45; color: var(--text-2); }
+.reload-banner-copy b { font-size: 13.5px; }
+.reload-banner-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin-top: 9px; padding-left: 38px; }
+.reload-why summary {
+  list-style: none; cursor: pointer;
+  display: inline-flex; align-items: center; height: 28px; padding: 0 6px;
+  border-radius: var(--r-xs);
+  font-size: var(--fs-sm); color: var(--muted);
+  text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px;
+}
+.reload-why summary::-webkit-details-marker { display: none; }
+.reload-why summary:hover { color: var(--text); }
+.reload-why[open] { flex-basis: 100%; }
+.reload-banner-text { margin-top: 4px; font-size: var(--fs-sm); line-height: 1.55; color: var(--muted); }
+@container views (max-width: 340px) {
+  .reload-banner-actions { padding-left: 0; }
+  .reload-banner-actions .btn { flex: 1; }
 }
 
-.effort-label {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
+/* ---------- Empty states ---------- */
+.empty-state {
+  --tone: var(--c-violet);
+  grid-column: 1 / -1;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 36px 16px 28px;
+  text-align: center;
 }
+.tone-copilot { --tone: var(--c-copilot); }
+.tone-muted   { --tone: var(--muted); }
+.empty-state-icon {
+  position: relative;
+  display: grid; place-items: center;
+  width: 64px; height: 64px; margin-bottom: 16px;
+  border-radius: 20px;
+  color: var(--tone);
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  box-shadow: var(--elev-2);
+}
+.empty-state-icon > .ic { position: relative; width: 30px; height: 30px; stroke-width: 1.5; }
+.empty-halo {
+  position: absolute; inset: -26px; z-index: -1; border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in oklab, var(--tone) var(--wash), transparent), transparent);
+}
+.empty-state-icon { isolation: isolate; }
+.empty-state-title { font-size: var(--fs-lg); font-weight: var(--fw-semi); color: var(--text); letter-spacing: -.01em; }
+.empty-state-desc { max-width: 290px; margin: 6px auto 16px; font-size: var(--fs-sm); line-height: 1.55; color: var(--muted); }
 
-.effort-select {
-  min-width: 140px;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-primary);
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: var(--font-size-sm);
+.skeleton-list { display: grid; gap: 10px; }
+.sk-card { display: grid; gap: 8px; padding: 14px; border-radius: var(--r-lg); background: var(--surface-1); border: 1px solid var(--line-soft); }
+
+/* Older class kept for compatibility with anything that still emits it */
+.agent-note { font-size: var(--fs-sm); line-height: 1.5; color: var(--text-2); }
+.agent-warn { }
+
+/* Default row: below ~440px the button moves under the text instead of
+   squeezing the explanation into a five-line column. */
+@container views (max-width: 440px) {
+  .card-default .active-model-header { grid-template-columns: auto minmax(0, 1fr); align-items: start; }
+  .card-default .default-glyph { margin-top: 1px; }
+  .card-default .card-actions { grid-column: 2; justify-content: flex-start; margin-top: 2px; }
 }

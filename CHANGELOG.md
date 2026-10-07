@@ -3,6 +3,39 @@
 All notable changes to **OpenRouter Maestro** are documented here.
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [1.2.0]
+
+**A redesigned panel.** The Model Browser was rebuilt from scratch. Every feature and the extension's message protocol stay the same; only the webview changed.
+
+- **The panel follows your VS Code theme.** It now works in light themes too; before, it was always dark. Surfaces, text and focus rings are derived from the active theme, and high-contrast themes drop the glows and gradients.
+- **See what every agent is running from any tab.** The tab bar is now an agent dock that stays on screen. Each tile shows the agent's state: `3 live` for Copilot, the active model for Claude Code and Codex, or `Default`, `Reload` and `Missing`. In wider panels the tiles also list the live model names.
+- **New model cards.** Each card has a provider monogram, labeled capability chips (Vision, Tools, Reasoning, Image Out) styled like the filter chips, and a metric strip with input and output price per million tokens, context window and max output. Small log-scaled meters under each value let you compare models while scanning.
+- **Clearer agent buttons.** On each card the Copilot / Claude Code / Codex buttons form one group with three states: add, in list, and running. In wider panels they spell out `In Copilot` or `Running in Claude Code`.
+- **Reworked Claude Code and Codex tabs:**
+  - A **Now running** card shows the active model, its price and limits, and a context ring.
+  - **Activate** buttons use the agent's color.
+  - The "own model" default row and the restart banner are kept.
+- **Saved models show the same metric strip as Browse cards** on all three agent tabs: input and output price, context and max output, each with its meter. Removing a model is a clearly marked red trash button.
+- **A single title for the sidebar.** The view header reads just *OpenRouter Maestro* instead of *OpenRouter Maestro: Model Browser*. Its duplicate refresh button is gone; sync from the panel's own header or the `OpenRouter Maestro: Sync Models from API` command.
+- **Copilot tab:**
+  - **Thinking effort** is a segmented control that wraps on narrow panels.
+  - Wide panels use two columns.
+- **Search and filters:**
+  - Press `/` to focus search.
+  - The provider menu shows readable names (`Meta` instead of `meta-llama`) and supports the keyboard.
+  - Sort is a compact menu button.
+- **Works in a narrow sidebar.** Nothing clips or wraps at 300px.
+- **Keyboard and screen readers:**
+  - Arrow keys move between tabs.
+  - Every control has a visible focus ring.
+  - Icon-only buttons and dock tiles have full labels.
+  - Click targets are at least 24px.
+  - Text meets WCAG AA contrast in both Dark Modern and Light Modern.
+- **Icons are inline SVG** instead of emoji, so they look the same on every platform.
+- **Calmer feedback:**
+  - Only one toast shows at a time, and it no longer covers the control you just pressed. You can dismiss it with a click or Escape.
+  - Loading animations stop when hidden, and every animation respects *reduce motion*.
+
 ## [1.1.0]
 
 - **Thinking effort control for Copilot.** Reasoning models now expose a **Thinking Effort** submenu in the Copilot model picker; the chosen value is sent to OpenRouter as `reasoning.effort`. Previously reasoning output was displayed but never controlled.

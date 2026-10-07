@@ -11,171 +11,192 @@
   <link rel="stylesheet" href="{{animationsCssUri}}">
 </head>
 <body>
-  <div class="app">
+  <div class="app" id="app" data-tab="browse">
 
-    <!-- API Key Banner (shown when no key is set) -->
-    <div class="api-key-banner" id="apikey-banner" style="display:none;">
-      <span class="api-key-banner-icon">🔑</span>
-      <span class="api-key-banner-text">API key not set. Set your OpenRouter API key to browse and add models.</span>
-      <button class="btn btn-sm" id="apikey-banner-btn">Set Key</button>
-    </div>
-
-    <!-- Header -->
-    <div class="header">
-      <div class="header-left">
-        <svg class="header-logo" width="22" height="22" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <defs>
-            <linearGradient id="logoMark" x1="30" y1="64" x2="98" y2="64" gradientUnits="userSpaceOnUse">
-              <stop offset="0" stop-color="#58A6FF"/>
-              <stop offset="0.52" stop-color="#BC8CFF"/>
-              <stop offset="1" stop-color="#FDE68A"/>
-            </linearGradient>
-          </defs>
-          <path d="M 22 104 L 22 34 L 64 76 L 106 34 L 106 104"
-                stroke="url(#logoMark)" stroke-width="17"
-                stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-          <circle cx="64" cy="76" r="9" fill="#FFFFFF"/>
-          <path d="M 111 4 L 114.4 14.6 L 125 18 L 114.4 21.4 L 111 32 L 107.6 21.4 L 97 18 L 107.6 14.6 Z" fill="#FDE68A"/>
-        </svg>
-        <span class="header-title">OpenRouter Maestro</span>
-      </div>
-      <div class="header-actions">
-        <button class="btn-icon" id="apikey-btn" title="Set API Key">🔑</button>
-        <button class="btn-icon" id="sync-btn" title="Sync models from OpenRouter">🔄</button>
-      </div>
-    </div>
-
-    <!-- Tab Bar -->
-    <div class="tab-bar">
-      <button class="tab-btn active" id="tab-browse">🌐 Browse</button>
-      <button class="tab-btn tab-copilot" id="tab-copilot">
-        Copilot
-        <span class="tab-badge" id="copilot-count">0</span>
-      </button>
-      <button class="tab-btn tab-claude" id="tab-claude">
-        Claude Code
-        <span class="tab-badge" id="claude-count">0</span>
-      </button>
-      <button class="tab-btn tab-codex" id="tab-codex">
-        Codex
-        <span class="tab-badge" id="codex-count">0</span>
-      </button>
-    </div>
-
-    <!-- TAB 1: BROWSE MODELS -->
-    <div class="tab-content active" id="tab-content-browse">
-      <!-- Search -->
-      <div class="search-section">
-        <div class="search-wrapper">
-          <span class="search-icon">🔍</span>
-          <input
-            type="text"
-            class="search-input"
-            id="search-input"
-            placeholder="Search models by name, provider, or ID..."
-            autocomplete="off"
-            spellcheck="false"
-          />
-          <button class="search-clear" id="search-clear" title="Clear search">✕</button>
-        </div>
-      </div>
-
-      <!-- Filter Bar -->
-      <div class="filter-bar">
-        <button class="filter-chip vision" id="filter-vision">
-          <span class="filter-chip-icon">👁️</span> Vision
-        </button>
-        <button class="filter-chip tools" id="filter-tools">
-          <span class="filter-chip-icon">🔧</span> Tools
-        </button>
-        <button class="filter-chip free" id="filter-free">
-          <span class="filter-chip-icon">✨</span> Free
-        </button>
-        <button class="filter-chip reasoning" id="filter-reasoning">
-          <span class="filter-chip-icon">🧠</span> Reasoning
-        </button>
-
-        <span class="filter-separator"></span>
-
-        <div class="provider-dropdown">
-          <button class="filter-chip" id="provider-filter-btn">🏢 Provider</button>
-          <div class="provider-dropdown-menu" id="provider-menu"></div>
-        </div>
-
-        <span class="filter-separator"></span>
-
-        <select class="sort-select" id="sort-select">
-          <option value="name-asc">Sort: Name A-Z</option>
-          <option value="price-asc">Sort: Price ↑</option>
-          <option value="price-desc">Sort: Price ↓</option>
-          <option value="context-desc">Sort: Context ↓</option>
-          <option value="newest">Sort: Newest</option>
-        </select>
-      </div>
-
-      <!-- Stats Bar -->
-      <div class="stats-bar">
-        <span class="stats-text">
-          Showing <span class="stats-count" id="stats-filtered">0</span>
-          of <span class="stats-count" id="stats-count">0</span> models
+    <!-- ===== Header ===== -->
+    <header class="header">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg class="header-logo" width="22" height="22" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="logoMark" x1="30" y1="64" x2="98" y2="64" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="#58A6FF"/>
+                <stop offset="0.52" stop-color="#BC8CFF"/>
+                <stop offset="1" stop-color="#FDE68A"/>
+              </linearGradient>
+            </defs>
+            <path d="M 22 104 L 22 34 L 64 76 L 106 34 L 106 104"
+                  stroke="url(#logoMark)" stroke-width="17"
+                  stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <circle class="logo-dot" cx="64" cy="76" r="9"/>
+            <path class="logo-star" d="M 111 4 L 114.4 14.6 L 125 18 L 114.4 21.4 L 111 32 L 107.6 21.4 L 97 18 L 107.6 14.6 Z"/>
+          </svg>
+        </span>
+        <span class="brand-text">
+          <span class="brand-eyebrow">OpenRouter</span>
+          <span class="brand-title">Maestro</span>
         </span>
       </div>
+      <div class="header-actions">
+        <button class="btn-icon" id="apikey-btn" title="Set API Key" aria-label="Set API Key">
+          <span data-icon="key"></span><span class="btn-icon-dot" aria-hidden="true"></span>
+        </button>
+        <button class="btn-icon" id="sync-btn" title="Sync models from OpenRouter" aria-label="Sync models from OpenRouter">
+          <span data-icon="refresh"></span>
+        </button>
+      </div>
+    </header>
 
-      <!-- Model List -->
-      <div class="model-list-container" id="model-list-container">
-        <div class="model-list stagger-children" id="model-list">
-          <div class="empty-state">
-            <div class="empty-state-icon">⚡</div>
-            <div class="empty-state-title">Welcome!</div>
-            <div class="empty-state-desc">Set your API key and sync models to get started.</div>
+    <!-- ===== API key banner (shown when no key is set) ===== -->
+    <div class="api-key-banner" id="apikey-banner" style="display:none;" role="status">
+      <span class="api-key-banner-icon" data-icon="key" aria-hidden="true"></span>
+      <span class="api-key-banner-text">API key not set. Set your OpenRouter API key to browse and add models.</span>
+      <button class="btn btn-sm btn-amber" id="apikey-banner-btn">Set Key</button>
+    </div>
+
+    <!-- ===== Agent dock: the tabs double as live status tiles ===== -->
+    <nav class="dock" aria-label="Views">
+      <div class="dock-track" role="tablist" aria-label="Maestro views">
+        <button class="dock-tile tab-btn tile-browse active" id="tab-browse" role="tab" aria-label="Browse" aria-selected="true"
+                aria-controls="tab-content-browse" tabindex="0" data-tab="browse">
+          <span class="tile-icon" aria-hidden="true"><span data-icon="compass"></span></span>
+          <span class="tile-text" aria-hidden="true">
+            <span class="tile-name">Browse</span>
+            <span class="tile-sub" id="browse-sub"><span class="tile-sub-text">Catalog</span></span>
+          </span>
+        </button>
+        <button class="dock-tile tab-btn tab-copilot tile-copilot" id="tab-copilot" role="tab" aria-label="Copilot" aria-selected="false"
+                aria-controls="tab-content-copilot" tabindex="-1" data-tab="copilot">
+          <span class="tile-icon" aria-hidden="true"><span data-icon="copilot"></span><span class="tab-badge" id="copilot-count">0</span></span>
+          <span class="tile-text" aria-hidden="true">
+            <span class="tile-name">Copilot</span>
+            <span class="tile-sub" id="copilot-sub"><span class="tile-sub-text">None yet</span></span>
+          </span>
+        </button>
+        <button class="dock-tile tab-btn tab-claude tile-claude" id="tab-claude" role="tab" aria-label="Claude Code" aria-selected="false"
+                aria-controls="tab-content-claude" tabindex="-1" data-tab="claude">
+          <span class="tile-icon" aria-hidden="true"><span data-icon="claude"></span><span class="tab-badge" id="claude-count">0</span></span>
+          <span class="tile-text" aria-hidden="true">
+            <span class="tile-name"><span class="tile-name-long">Claude Code</span><span class="tile-name-short">Claude</span></span>
+            <span class="tile-sub" id="claude-sub"><span class="tile-sub-text">Checking…</span></span>
+          </span>
+        </button>
+        <button class="dock-tile tab-btn tab-codex tile-codex" id="tab-codex" role="tab" aria-label="Codex" aria-selected="false"
+                aria-controls="tab-content-codex" tabindex="-1" data-tab="codex">
+          <span class="tile-icon" aria-hidden="true"><span data-icon="codex"></span><span class="tab-badge" id="codex-count">0</span></span>
+          <span class="tile-text" aria-hidden="true">
+            <span class="tile-name">Codex</span>
+            <span class="tile-sub" id="codex-sub"><span class="tile-sub-text">Checking…</span></span>
+          </span>
+        </button>
+      </div>
+    </nav>
+
+    <main class="views" id="views">
+
+      <!-- ===== TAB 1: BROWSE MODELS ===== -->
+      <section class="tab-content active" id="tab-content-browse" role="tabpanel" aria-labelledby="tab-browse">
+        <div class="browse-toolbar">
+          <div class="search-wrapper">
+            <span class="search-icon" data-icon="search" aria-hidden="true"></span>
+            <input
+              type="text"
+              class="search-input"
+              id="search-input"
+              placeholder="Search models, providers, IDs…"
+              aria-label="Search models by name, provider, or ID"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <kbd class="search-kbd" aria-hidden="true" title="Press / to search">/</kbd>
+            <button class="search-clear" id="search-clear" title="Clear search" aria-label="Clear search"><span data-icon="x"></span></button>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- TAB 2: COPILOT -->
-    <div class="tab-content" id="tab-content-copilot">
-      <div style="margin-bottom: var(--space-3); font-size: var(--font-size-sm); color: var(--text-muted);">
-        Models available in the Copilot Chat model picker under <b>OpenRouter Maestro</b>.
-        You can enable as many as you like from the <b>Browse</b> tab.
-      </div>
-      <div id="copilot-models-list">
-        <div class="empty-state">
-          <div class="empty-state-icon">🔵</div>
-          <div class="empty-state-title">No models in Copilot yet</div>
-          <div class="empty-state-desc">In the Browse tab, press a model card's <b>Copilot</b> button to add it.</div>
+        <div class="filter-panel">
+          <div class="filter-bar" role="group" aria-label="Capability filters">
+            <button class="filter-chip vision" id="filter-vision" aria-pressed="false" title="Only models that accept images">
+              <span class="chip-icon" data-icon="eye"></span><span class="chip-check" data-icon="check"></span><span>Vision</span>
+            </button>
+            <button class="filter-chip tools" id="filter-tools" aria-pressed="false" title="Only models with tool calling">
+              <span class="chip-icon" data-icon="wrench"></span><span class="chip-check" data-icon="check"></span><span>Tools</span>
+            </button>
+            <button class="filter-chip free" id="filter-free" aria-pressed="false" title="Only free models">
+              <span class="chip-icon" data-icon="tag"></span><span class="chip-check" data-icon="check"></span><span>Free</span>
+            </button>
+            <button class="filter-chip reasoning" id="filter-reasoning" aria-pressed="false" title="Only reasoning models">
+              <span class="chip-icon" data-icon="bulb"></span><span class="chip-check" data-icon="check"></span><span>Reasoning</span>
+            </button>
+          </div>
+
+          <div class="display-row">
+            <span class="stats-text" aria-live="polite">
+              <span class="stats-count" id="stats-filtered">0</span>
+              <span class="stats-of">of</span>
+              <span class="stats-total" id="stats-count">0</span>
+              <span class="stats-of">models</span>
+            </span>
+            <div class="display-controls">
+              <div class="provider-dropdown">
+                <button class="menu-btn" id="provider-filter-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="provider-menu" title="Filter by provider">
+                  <span class="menu-btn-icon" data-icon="layers"></span>
+                  <span class="menu-btn-label" id="provider-filter-label">All providers</span>
+                  <span class="menu-btn-chev" data-icon="chevDown"></span>
+                </button>
+                <div class="provider-dropdown-menu" id="provider-menu" role="menu" aria-label="Providers"></div>
+              </div>
+              <label class="select-wrap" title="Sort models">
+                <span class="menu-btn-icon" data-icon="sort"></span>
+                <select class="sort-select" id="sort-select" aria-label="Sort models">
+                  <option value="name-asc">Name A–Z</option>
+                  <option value="price-asc">Price ↑</option>
+                  <option value="price-desc">Price ↓</option>
+                  <option value="context-desc">Context ↓</option>
+                  <option value="newest">Newest</option>
+                </select>
+                <span class="menu-btn-chev" data-icon="chevDown"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="model-list-container" id="model-list-container">
+          <div class="model-list" id="model-list"></div>
+        </div>
+      </section>
+
+      <!-- ===== TAB 2: COPILOT ===== -->
+      <section class="tab-content" id="tab-content-copilot" role="tabpanel" aria-labelledby="tab-copilot">
+        <div class="agent-layout copilot-layout">
+          <div class="agent-col" id="copilot-hero"></div>
+          <div class="agent-col agent-col-main" id="copilot-models-list"></div>
+        </div>
+      </section>
+
+      <!-- ===== TAB 3: CLAUDE CODE ===== -->
+      <section class="tab-content" id="tab-content-claude" role="tabpanel" aria-labelledby="tab-claude">
+        <div id="claude-agent-card"></div>
+      </section>
+
+      <!-- ===== TAB 4: CODEX ===== -->
+      <section class="tab-content" id="tab-content-codex" role="tabpanel" aria-labelledby="tab-codex">
+        <div id="codex-agent-card"></div>
+      </section>
+    </main>
+
+    <!-- ===== Loading overlay ===== -->
+    <div class="loading-overlay" id="loading-overlay" aria-hidden="true">
+      <div class="loading-card" role="status">
+        <div class="loading-spinner" aria-hidden="true"></div>
+        <div class="loading-text">Fetching models from OpenRouter...</div>
+        <div class="skeleton" aria-hidden="true">
+          <span class="sk sk-a"></span><span class="sk sk-b"></span><span class="sk sk-c"></span>
         </div>
       </div>
     </div>
 
-    <!-- TAB 3: CLAUDE CODE -->
-    <div class="tab-content" id="tab-content-claude">
-      <div id="claude-agent-card">
-        <div class="empty-state">
-          <div class="empty-state-icon">🟠</div>
-          <div class="empty-state-title">Checking Claude Code…</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB 4: CODEX -->
-    <div class="tab-content" id="tab-content-codex">
-      <div id="codex-agent-card">
-        <div class="empty-state">
-          <div class="empty-state-icon">🟢</div>
-          <div class="empty-state-title">Checking Codex…</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Loading Overlay -->
-    <div class="loading-overlay" id="loading-overlay">
-      <div class="loading-spinner"></div>
-      <div class="loading-text">Fetching models from OpenRouter...</div>
-    </div>
-
-    <!-- Toast Container -->
-    <div class="toast-container" id="toast-container"></div>
+    <!-- ===== Toasts ===== -->
+    <div class="toast-container" id="toast-container" aria-live="polite"></div>
   </div>
 
   <script src="{{vscodeApiJsUri}}"></script>
