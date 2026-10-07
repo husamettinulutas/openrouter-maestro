@@ -23,6 +23,13 @@ function getConfig<T>(key: string, defaultValue: T): T {
 /** HTTP status codes that are safe to retry. */
 const RETRYABLE_STATUS_CODES = new Set([429, 502, 503, 504]);
 
+/**
+ * Smallest max_tokens worth retrying a credit-rejected request with. Below
+ * this the reply would be truncated mid-sentence, so surfacing the 402 and
+ * letting the user top up is more useful than a stub answer.
+ */
+const MIN_REFIT_MAX_TOKENS = 512;
+
 /** Node.js network error codes that are safe to retry. */
 const RETRYABLE_ERROR_CODES = new Set([
   'ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'EPIPE', 'EAI_AGAIN', 'EHOSTUNREACH',
@@ -34,6 +41,12 @@ const RETRYABLE_ERROR_CODES = new Set([
  * Custom error that carries HTTP metadata for retry decisions.
  */
 class OpenRouterRequestError extends Error {
+  /** Raw response body, appended to the user-visible message when it is finally reported. */
+  public details?: string;
+
+  /** True once the friendly message has been written to the response stream. */
+  public reported = false;
+
   constructor(
     message: string,
     public readonly statusCode?: number,
@@ -41,10 +54,32 @@ class OpenRouterRequestError extends Error {
     public readonly errorCode?: string,
     /** True when the request was blocked by OpenRouter's prompt-injection guardrails. */
     public readonly isGuardrailBlock?: boolean,
+    /**
+     * Completion-token budget the remaining balance can cover, parsed out of a
+     * 402 body ("...but can only afford 14887"). Lets the request be retried
+     * with a max_tokens that fits instead of failing outright.
+     */
+    public readonly affordableTokens?: number,
   ) {
     super(message);
     this.name = 'OpenRouterRequestError';
   }
+}
+
+/**
+ * Extract the affordable completion-token count from a 402 response body.
+ *
+ * OpenRouter runs a pre-flight credit check that reserves
+ * `max_tokens × completion price` before generating anything. When max_tokens
+ * is omitted the model's full output limit is reserved, so a small balance
+ * 402s even though the actual reply would cost a fraction of that. The body
+ * states the budget that *would* fit, which we can retry with.
+ */
+function parseAffordableTokens(body: string): number | undefined {
+  const match = /can only afford\s+(\d+)/i.exec(body);
+  if (!match) { return undefined; }
+  const value = parseInt(match[1], 10);
+  return Number.isFinite(value) && value > 0 ? value : undefined;
 }
 
 // ─── Provider ────────────────────────────────────────────────────────────────
@@ -213,6 +248,34 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
       // Cancellation is not an error
       if (token.isCancellationRequested) { return; }
 
+      // 402 credit pre-check: OpenRouter reserves `max_tokens × completion
+      // price` up front, defaulting to the model's full output limit when we
+      // send no max_tokens. On a low balance that reservation fails before a
+      // single token is spent. Retry once with a max_tokens the balance covers.
+      if (err instanceof OpenRouterRequestError && err.affordableTokens !== undefined) {
+        const budget = Math.floor(err.affordableTokens * 0.9);
+        const current = typeof requestBody.max_tokens === 'number' ? requestBody.max_tokens : undefined;
+        if (budget >= MIN_REFIT_MAX_TOKENS && (current === undefined || current > budget)) {
+          Logger.warn(
+            `Insufficient credits for the reserved output budget; retrying once with max_tokens=${budget} ` +
+            `(balance affords ${err.affordableTokens})`,
+          );
+          progress.report(
+            new vscode.LanguageModelTextPart(
+              `\n💳 OpenRouter balance is low — retrying once with the reply capped to ${budget} tokens...\n`,
+            ),
+          );
+          const retryBody = { ...requestBody, max_tokens: budget };
+          try {
+            await this.makeRequestWithRetry(retryBody, apiKey, progress, token, 0, timeoutSeconds);
+            return;
+          } catch (retryErr: any) {
+            if (token.isCancellationRequested) { return; }
+            err = retryErr;
+          }
+        }
+      }
+
       // Guardrail 403 (prompt injection detection): retry once with base64
       // blobs stripped — but only if stripping actually changes the payload
       // (it won't if the proactive sanitizer already ran), so this can't loop.
@@ -238,9 +301,18 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
         }
       }
 
-      // OpenRouterRequestError messages were already reported to progress in makeStreamingRequest.
-      // For unexpected errors, report them now.
-      if (!(err instanceof OpenRouterRequestError)) {
+      // Most OpenRouterRequestError messages were already reported to progress in
+      // makeStreamingRequest; recoverable ones held theirs back for the retry above.
+      if (err instanceof OpenRouterRequestError) {
+        if (!err.reported) {
+          progress.report(
+            new vscode.LanguageModelTextPart(
+              err.message + (err.details ? '\n\nDetails: ' + err.details : ''),
+            ),
+          );
+          err.reported = true;
+        }
+      } else {
         const msg = `❌ Unexpected error: ${err.message || err}`;
         progress.report(new vscode.LanguageModelTextPart(msg));
         Logger.error(msg, err);
@@ -434,7 +506,7 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
               type: 'function',
               function: {
                 name: part.name,
-                arguments: typeof part.input === 'string' ? part.input : JSON.stringify(part.input),
+                arguments: this.safeSerializeToolArguments(part.input),
               },
             });
           } else {
@@ -555,12 +627,18 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
       model: modelId,
       messages,
       stream: true,
-      // Request usage statistics in the streaming response
-      stream_options: { include_usage: true },
     };
 
     if (reasoningEffort) {
       body.reasoning = { effort: reasoningEffort };
+    }
+
+    // stream_options requests usage statistics in the streaming response, but
+    // some backend providers (Azure, certain OpenAI endpoints) reject the field
+    // with invalid_json / unrecognized-field errors. On by default for
+    // OpenRouter-native usage; can be turned off per workspace.
+    if (getConfig<boolean>('enableStreamUsage', true)) {
+      body.stream_options = { include_usage: true };
     }
 
     // Enable OpenRouter automatic prompt caching. Anthropic models only cache
@@ -708,7 +786,6 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
               Logger.error(`Full error body: ${fullError}`);
 
               const friendly = this.buildFriendlyError(res.statusCode, errBody);
-              progress.report(new vscode.LanguageModelTextPart(friendly + '\n\nDetails: ' + fullError));
 
               // Parse Retry-After header for 429 responses
               let retryAfter: number | undefined;
@@ -717,15 +794,29 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
                 if (header) { retryAfter = parseInt(header as string, 10) || 5; }
               }
 
-              reject(
-                new OpenRouterRequestError(
-                  friendly,
-                  res.statusCode,
-                  retryAfter,
-                  undefined,
-                  this.isGuardrailBlockError(res.statusCode, errBody),
-                ),
+              const isGuardrail = this.isGuardrailBlockError(res.statusCode, errBody);
+              const affordable = res.statusCode === 402 ? parseAffordableTokens(errBody) : undefined;
+
+              const error = new OpenRouterRequestError(
+                friendly,
+                res.statusCode,
+                retryAfter,
+                undefined,
+                isGuardrail,
+                affordable,
               );
+              error.details = fullError;
+
+              // Errors the caller can recover from (guardrail strip, max_tokens
+              // refit) stay off the response stream until that retry has also
+              // failed — otherwise a successful retry is preceded by a scary
+              // error dump.
+              if (!isGuardrail && affordable === undefined) {
+                progress.report(new vscode.LanguageModelTextPart(friendly + '\n\nDetails: ' + fullError));
+                error.reported = true;
+              }
+
+              reject(error);
             });
             return;
           }
@@ -902,6 +993,34 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
     pendingToolCalls.clear();
   }
 
+  /**
+   * Safely serialize tool call arguments to a JSON string.
+   * VS Code may pass input as a parsed object, a valid JSON string, or
+   * occasionally a malformed string. This guarantees the returned value is
+   * always valid JSON so the outer request body stays parseable by the API.
+   */
+  private safeSerializeToolArguments(input: any): string {
+    // Not a string — serialize the object directly
+    if (typeof input !== 'string') {
+      try {
+        return JSON.stringify(input ?? {});
+      } catch {
+        Logger.warn('Tool call input could not be serialized, using empty object');
+        return '{}';
+      }
+    }
+
+    // A string — verify it is valid JSON before passing it through
+    try {
+      JSON.parse(input);
+      return input;
+    } catch {
+      // Wrap the raw string so the arguments field is still valid JSON
+      Logger.warn(`Tool call arguments string is not valid JSON, wrapping as _raw: ${input.slice(0, 100)}`);
+      return JSON.stringify({ _raw: input });
+    }
+  }
+
   // ────────────────────────────────────────────────────────────────────────────
   // Usage statistics
   // ────────────────────────────────────────────────────────────────────────────
@@ -1047,8 +1166,10 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
     const safetyMargin = Math.floor(netInput * 0.10);
     const result = netInput - safetyMargin;
 
-    // Ensure we return at least a reasonable minimum
-    return Math.max(result, 8192);
+    // Clamp to sane bounds. The upper bound matters for million-token models:
+    // reporting the full window makes VS Code think compaction is never needed,
+    // so request bodies grow until the backend rejects them.
+    return Math.max(8192, Math.min(result, 900_000));
   }
 
   // ────────────────────────────────────────────────────────────────────────────
