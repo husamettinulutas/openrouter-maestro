@@ -3,6 +3,10 @@
 All notable changes to **OpenRouter Maestro** are documented here.
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [1.2.1]
+
+- Ships the 1.2.0 redesign together with the 1.1.1 fixes: 402 auto-recovery on a low balance, the `openrouterMaestro.claudeCode.maxOutputTokens` and `openrouterMaestro.enableStreamUsage` settings, tool-argument validation and the 900K `maxInputTokens` clamp. No other changes.
+
 ## [1.2.0]
 
 **A redesigned panel.** The Model Browser was rebuilt from scratch. Every feature and the extension's message protocol stay the same; only the webview changed.
