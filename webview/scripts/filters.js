@@ -51,11 +51,12 @@ const Filters = (function() {
 
     // Sorting
     switch (currentFilters.sortBy) {
+      // Routers (variable price) sort last in both directions
       case 'price-asc':
-        result.sort((a, b) => a.pricing.promptPerMillion - b.pricing.promptPerMillion);
+        result.sort((a, b) => priceKey(a, Infinity) - priceKey(b, Infinity));
         break;
       case 'price-desc':
-        result.sort((a, b) => b.pricing.promptPerMillion - a.pricing.promptPerMillion);
+        result.sort((a, b) => priceKey(b, -Infinity) - priceKey(a, -Infinity));
         break;
       case 'context-desc':
         result.sort((a, b) => b.contextLength - a.contextLength);
@@ -69,6 +70,12 @@ const Filters = (function() {
     }
 
     return result;
+  }
+
+  /** Input price for sorting; `variable` stands in for routers (openrouter/auto, …). */
+  function priceKey(m, variable) {
+    const p = m.pricing.promptPerMillion;
+    return m.variablePricing || p < 0 || m.pricing.completionPerMillion < 0 ? variable : p;
   }
 
   /** Update a single filter value and return all filters */

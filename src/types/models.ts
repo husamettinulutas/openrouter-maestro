@@ -81,6 +81,8 @@ export interface ProcessedModel {
   };
   supportedParameters: string[];
   isFree: boolean;
+  /** Routers such as openrouter/auto: billed at the price of the model they pick. Prices are 0. */
+  variablePricing?: boolean;
   createdAt?: number;
 }
 

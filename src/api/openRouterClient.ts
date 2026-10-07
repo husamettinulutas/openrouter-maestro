@@ -5,6 +5,7 @@ import { Logger } from '../utils/logger';
 import { normalizeApiKey } from '../utils/apiKeyUtils';
 import { getAttributionHeaders } from '../utils/branding';
 import { parseModelReasoning } from '../utils/reasoningEffort';
+import { isVariablePrice } from '../utils/servedModel';
 
 const DEFAULT_BASE_URL = 'https://openrouter.ai/api/v1';
 
@@ -143,8 +144,12 @@ export class OpenRouterClient {
         return null;
       }
 
-      const promptCost = parseFloat(raw.pricing?.prompt || '0');
-      const completionCost = parseFloat(raw.pricing?.completion || '0');
+      const rawPrompt = parseFloat(raw.pricing?.prompt || '0') || 0;
+      const rawCompletion = parseFloat(raw.pricing?.completion || '0') || 0;
+      // Routers (openrouter/auto, …) are priced "-1": the cost is that of the model they pick
+      const variablePricing = isVariablePrice(rawPrompt) || isVariablePrice(rawCompletion);
+      const promptCost = variablePricing ? 0 : rawPrompt;
+      const completionCost = variablePricing ? 0 : rawCompletion;
 
       const inputModalities = raw.architecture?.input_modalities || ['text'];
       const outputModalities = raw.architecture?.output_modalities || ['text'];
@@ -173,7 +178,8 @@ export class OpenRouterClient {
         },
         reasoning,
         supportedParameters: supportedParams,
-        isFree: promptCost === 0 && completionCost === 0,
+        isFree: !variablePricing && promptCost === 0 && completionCost === 0,
+        variablePricing: variablePricing || undefined,
         createdAt: raw.created,
       };
     } catch (error) {

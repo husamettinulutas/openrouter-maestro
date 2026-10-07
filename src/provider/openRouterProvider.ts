@@ -6,6 +6,8 @@ import { Logger } from '../utils/logger';
 import { ProcessedModel, SelectedModel } from '../types/models';
 import { normalizeApiKey } from '../utils/apiKeyUtils';
 import { getAttributionHeaders } from '../utils/branding';
+import { flattenToolResultContent } from '../utils/toolResultContent';
+import { describeServedModel, shortModelName } from '../utils/servedModel';
 import {
   buildThinkingEffortSchema,
   resolveReasoningEffort,
@@ -197,7 +199,7 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
     }
 
     // Format messages (with system role support)
-    let formattedMessages = this.formatMessages(messages);
+    let formattedMessages = this.formatMessages(messages, model.capabilities?.imageInput === true);
 
     // Proactively strip long base64 blobs so organization guardrails don't
     // block the request as base64_encoded_injection (and to save tokens).
@@ -434,8 +436,13 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
   /**
    * Format VS Code messages for OpenRouter API.
    * Supports: system role, multimodal/vision, tool calls, tool results.
+   * `allowImages` is the model's image-input capability; images returned by tools
+   * are forwarded only when the model can read them.
    */
-  private formatMessages(messages: readonly vscode.LanguageModelChatRequestMessage[]): any[] {
+  private formatMessages(
+    messages: readonly vscode.LanguageModelChatRequestMessage[],
+    allowImages: boolean,
+  ): any[] {
     const formattedMessages: any[] = [];
 
     for (const msg of messages) {
@@ -478,16 +485,39 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
       // ── Handle tool result messages ──
       // VS Code sends tool results as User messages with LanguageModelToolResultPart.
       // OpenRouter/OpenAI API expects these as separate { role: 'tool', ... } messages.
+      // A tool message carries text only, so images a tool returned (screenshots,
+      // fetched pages) follow the tool messages as one user message.
       if (hasToolResultParts && Array.isArray(msg.content)) {
+        const toolImages: Array<{ type: 'image_url'; image_url: { url: string } }> = [];
         for (const part of msg.content) {
           if (this.isToolResultPart(part)) {
-            const resultContent = this.extractTextFromParts(part.content);
+            const { text, images } = flattenToolResultContent(part.content);
+            let content = text;
+            if (images.length > 0) {
+              if (allowImages) {
+                for (const img of images) {
+                  toolImages.push({
+                    type: 'image_url',
+                    image_url: { url: `data:${img.mimeType};base64,${Buffer.from(img.data).toString('base64')}` },
+                  });
+                }
+                content += `${content ? '\n' : ''}[${images.length} image(s) attached in the next message]`;
+              } else {
+                content += `${content ? '\n' : ''}[${images.length} image(s) omitted: this model does not accept images]`;
+              }
+            }
             formattedMessages.push({
               role: 'tool',
               tool_call_id: part.callId,
-              content: resultContent || '(no output)',
+              content: content || '(no output)',
             });
           }
+        }
+        if (toolImages.length > 0) {
+          formattedMessages.push({
+            role: 'user',
+            content: [{ type: 'text', text: 'Images returned by the tool call(s) above:' }, ...toolImages],
+          });
         }
         continue;
       }
@@ -569,15 +599,6 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
     if (part instanceof vscode.LanguageModelTextPart) { return part.value; }
     if (typeof part === 'string') { return part; }
     if (part && typeof part === 'object' && 'value' in part) { return (part as any).value || ''; }
-    return '';
-  }
-
-  /** Extract text from an array of content parts or a plain string. */
-  private extractTextFromParts(content: any): string {
-    if (typeof content === 'string') { return content; }
-    if (Array.isArray(content)) {
-      return content.map((p) => this.extractTextFromPart(p)).join('');
-    }
     return '';
   }
 
@@ -825,6 +846,10 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
           let buffer = '';
           const pendingToolCalls = new Map<number, { id: string; name: string; arguments: string }>();
           let usageData: any = null;
+          // The model and upstream provider OpenRouter actually used (differs from
+          // requestBody.model for routers such as openrouter/auto)
+          let servedModel: string | undefined;
+          let servedProvider: string | undefined;
 
           res.on('data', (chunk) => {
             buffer += chunk.toString();
@@ -849,6 +874,8 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
 
                 // Capture usage stats (some providers send usage in stream chunks)
                 if (json.usage) { usageData = json.usage; }
+                if (typeof json.model === 'string' && json.model) { servedModel = json.model; }
+                if (typeof json.provider === 'string' && json.provider) { servedProvider = json.provider; }
 
                 // ── Thinking / Reasoning content ──
                 // Models like Claude 3.5/4, DeepSeek-R1, Qwen3 return reasoning
@@ -892,7 +919,7 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
             this.emitPendingToolCalls(pendingToolCalls, progress);
 
             // Update usage stats in status bar
-            if (usageData) { this.updateUsageStats(usageData, requestBody.model); }
+            this.updateUsageStats(usageData, requestBody.model, servedModel, servedProvider);
 
             resolve();
           });
@@ -1025,27 +1052,51 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
   // Usage statistics
   // ────────────────────────────────────────────────────────────────────────────
 
-  /** Update the status bar with token usage and dollar cost from the latest request. */
-  private updateUsageStats(usage: any, modelId: string): void {
+  /**
+   * Update the status bar with token usage, dollar cost and the model that
+   * actually answered (`servedModel`/`servedProvider` from the stream).
+   */
+  private updateUsageStats(
+    usage: any,
+    modelId: string,
+    servedModel?: string,
+    servedProvider?: string,
+  ): void {
+    const requested = this.cache.getModel(modelId);
+    const requestedIsRouter = this.hasVariablePricing(requested);
+    const served = describeServedModel(modelId, servedModel, servedProvider, requestedIsRouter);
+    const servedText = served.served
+      ? ` → ${served.served}${served.provider ? ` via ${served.provider}` : ''}`
+      : served.provider ? ` via ${served.provider}` : '';
+
+    if (!usage) {
+      if (servedText) { Logger.info(`Served [${modelId}]${servedText}`); }
+      return;
+    }
+
     const prompt = usage.prompt_tokens || 0;
     const completion = usage.completion_tokens || 0;
     const total = usage.total_tokens || prompt + completion;
     // OpenRouter reports cache hits under prompt_tokens_details.cached_tokens
     const cached = usage.prompt_tokens_details?.cached_tokens || 0;
 
-    // Calculate dollar cost using model pricing from cache
-    const model = this.cache.getModel(modelId);
+    // Prefer the cost OpenRouter billed; otherwise price the tokens with the
+    // model that answered (a router's own price is "varies").
     let costText = '';
     let costTooltip = '';
-    if (model) {
-      const inputCost = (prompt / 1_000_000) * model.pricing.promptPerMillion;
-      const outputCost = (completion / 1_000_000) * model.pricing.completionPerMillion;
+    const pricedBy = (served.served && this.cache.getModel(served.served)) || requested;
+    if (typeof usage.cost === 'number') {
+      costText = usage.cost > 0 ? ` · $${usage.cost.toFixed(6)}` : ' · Free';
+      costTooltip = `\nCost: $${usage.cost.toFixed(6)} (billed by OpenRouter)`;
+    } else if (pricedBy && !this.hasVariablePricing(pricedBy)) {
+      const inputCost = (prompt / 1_000_000) * pricedBy.pricing.promptPerMillion;
+      const outputCost = (completion / 1_000_000) * pricedBy.pricing.completionPerMillion;
       const totalCost = inputCost + outputCost;
 
       if (totalCost > 0) {
         costText = ` · $${totalCost.toFixed(6)}`;
         costTooltip = `\nCost: $${inputCost.toFixed(6)} input + $${outputCost.toFixed(6)} output = $${totalCost.toFixed(6)}`;
-        costTooltip += `\nPricing: $${model.pricing.promptPerMillion.toFixed(2)}/M input, $${model.pricing.completionPerMillion.toFixed(2)}/M output`;
+        costTooltip += `\nPricing: $${pricedBy.pricing.promptPerMillion.toFixed(2)}/M input, $${pricedBy.pricing.completionPerMillion.toFixed(2)}/M output`;
       } else {
         costText = ' · Free';
         costTooltip = '\nCost: Free model';
@@ -1053,14 +1104,23 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
     }
 
     const cachedText = cached > 0 ? ` (${cached} cached)` : '';
-    Logger.info(`Usage [${modelId}]: ${prompt} prompt${cachedText} + ${completion} completion = ${total} total tokens${costText}`);
+    Logger.info(`Usage [${modelId}${servedText}]: ${prompt} prompt${cachedText} + ${completion} completion = ${total} total tokens${costText}`);
 
     if (this._usageStatusBar) {
-      this._usageStatusBar.text = `$(pulse) ${total} tokens (${prompt}↑ ${completion}↓)${costText}`;
+      const inline = served.showInline && served.served ? ` · ${shortModelName(served.served)}` : '';
+      this._usageStatusBar.text = `$(pulse) ${total} tokens (${prompt}↑ ${completion}↓)${costText}${inline}`;
       this._usageStatusBar.tooltip =
-        `Last request: ${prompt} input${cachedText} + ${completion} output = ${total} total tokens${costTooltip}\nModel: ${modelId}`;
+        `Last request: ${prompt} input${cachedText} + ${completion} output = ${total} total tokens${costTooltip}` +
+        `\nModel: ${modelId}` +
+        (served.served ? `\nAnswered by: ${served.served}` : '') +
+        (served.provider ? `\nProvider: ${served.provider}` : '');
       this._usageStatusBar.show();
     }
+  }
+
+  /** Routers are billed at the price of the model they pick; caches from before 1.2.1 hold them as negative prices. */
+  private hasVariablePricing(model: ProcessedModel | undefined): boolean {
+    return !!model && (!!model.variablePricing || model.pricing.promptPerMillion < 0 || model.pricing.completionPerMillion < 0);
   }
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -1205,7 +1265,9 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
           );
           totalTokens += 10; // Overhead for tool call JSON structure
         } else if (this.isToolResultPart(part)) {
-          totalTokens += this.estimateTokens(this.extractTextFromParts(part.content));
+          const { text: resultText, images } = flattenToolResultContent(part.content);
+          totalTokens += this.estimateTokens(resultText);
+          totalTokens += images.length * 765; // Same per-image estimate as below
           totalTokens += 5; // Overhead for tool result structure
         } else if (this.isImageDataPart(part)) {
           // Images: rough estimate — most vision models use ~85 (low-res) to ~765 (high-res) tokens

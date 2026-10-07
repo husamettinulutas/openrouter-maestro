@@ -610,14 +610,26 @@
     return `<span class="meter meter-${kind}" aria-hidden="true"><span class="meter-fill" style="width:${pct}%"></span></span>`;
   }
 
+  /** Routers (openrouter/auto, …) bill the price of the model they pick; older caches hold them as negative prices. */
+  function hasVariablePrice(model) {
+    return !!model && !!model.pricing && (!!model.variablePricing || model.pricing.promptPerMillion < 0 || model.pricing.completionPerMillion < 0);
+  }
+
   /**
    * The In · Out · Context · Max out strip, shared by Browse cards and the
    * agent-tab rows. `pricing` is undefined for a model that is no longer in
    * the synced catalog; its prices then read "—".
    */
-  function metricsStrip({ pricing, isFree, contextLength, maxOutputTokens, extraClass }) {
+  function metricsStrip({ pricing, isFree, variable, contextLength, maxOutputTokens, extraClass }) {
     // "Free" carries no per-million unit — only the priced branch gets "/M".
-    const priceCells = isFree
+    // Routers bill the price of the model they pick, so they show "Varies".
+    const priceCells = variable
+      ? `<div class="metric metric-span2" title="Routes each request to a model and bills that model's price">
+           <span class="metric-label">Price</span>
+           <span class="metric-value">Varies</span>
+           ${meter('price', 0)}
+         </div>`
+      : isFree
       ? `<div class="metric metric-free metric-span2">
            <span class="metric-label">Price</span>
            <span class="metric-value"><span class="free-pill">Free</span></span>
@@ -768,6 +780,7 @@
         ${metricsStrip({
           pricing: model.pricing,
           isFree: model.isFree,
+          variable: hasVariablePrice(model),
           contextLength: model.contextLength,
           maxOutputTokens: model.maxOutputTokens,
         })}
@@ -992,6 +1005,7 @@
     const metrics = metricsStrip({
       pricing: full?.pricing,
       isFree: !!full?.isFree,
+      variable: hasVariablePrice(full),
       contextLength: fallback?.maxInputTokens || full?.contextLength,
       maxOutputTokens: fallback?.maxOutputTokens || full?.maxOutputTokens,
       extraClass: 'metrics-row',
@@ -1168,7 +1182,9 @@
       nowSub = activeId;
       nowRing = ring(activeFull ? activeFull.contextLength : 0, meta.icon, ringAnim);
       if (activeFull) {
-        const price = activeFull.isFree
+        const price = hasVariablePrice(activeFull)
+          ? '<span class="nm-item">Price <b>varies</b></span>'
+          : activeFull.isFree
           ? '<span class="nm-item"><b>Free</b></span>'
           : `<span class="nm-item">In <b>${money(activeFull.pricing.promptPerMillion)}</b></span><span class="nm-sep" aria-hidden="true">·</span><span class="nm-item">Out <b>${money(activeFull.pricing.completionPerMillion)}</b> /M</span>`;
         nowMetrics = `<span class="now-metrics">${price}<span class="nm-sep nm-sep-last" aria-hidden="true">·</span><span class="nm-item nm-last">Max out <b>${formatTokenCount(activeFull.maxOutputTokens)}</b></span></span>`;
