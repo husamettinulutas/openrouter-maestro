@@ -53,6 +53,32 @@
         "displayName": "OpenRouter Maestro"
       }
     ],
+    "languageModelTools": [
+      {
+        "name": "maestro_fetchWebPage",
+        "toolReferenceName": "maestroFetch",
+        "displayName": "Fetch Web Page (Maestro)",
+        "userDescription": "Download a web page and read its text. Works without a GitHub Copilot subscription.",
+        "modelDescription": "Fetches a public web page by URL and returns its main text as Markdown-like text (headings, lists, links, code blocks). Use it to read documentation, articles, READMEs, FAQs or any page the user mentions. Prefer this tool over fetch_webpage: fetch_webpage depends on a GitHub Copilot subscription and fails without one (for example with 'Your subscription has ended'). Long pages come back in parts; the result ends with the offset to pass to read the next part.",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(globe)",
+        "tags": ["web", "fetch"],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "Full http or https address of the page, e.g. https://example.com/docs/faq"
+            },
+            "offset": {
+              "type": "number",
+              "description": "Character offset to continue a long page from, as given at the end of the previous result. Omit for the start of the page."
+            }
+          },
+          "required": ["url"]
+        }
+      }
+    ],
     "commands": [
       {
         "command": "openrouterMaestro.openBrowser",
@@ -254,7 +280,7 @@
     "compile": "tsc --noEmit",
     "watch": "node esbuild.js --watch",
     "package": "npx @vscode/vsce package --no-dependencies",
-    "test": "npx --yes tsx --test src/__tests__/apiKeyUtils.test.ts src/__tests__/tokenEstimation.test.ts src/__tests__/reasoningEffort.test.ts"
+    "test": "npx --yes tsx --test src/__tests__/apiKeyUtils.test.ts src/__tests__/tokenEstimation.test.ts src/__tests__/reasoningEffort.test.ts src/__tests__/toolResultContent.test.ts src/__tests__/servedModel.test.ts src/__tests__/htmlToText.test.ts"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

@@ -9,6 +9,7 @@ import { AgentIntegration } from './integrations/agentIntegration';
 import { ClaudeCodeIntegration } from './integrations/claudeCode';
 import { CodexIntegration } from './integrations/codex';
 import { AgentTarget } from './types/models';
+import { FETCH_TOOL_NAME, FetchWebPageTool } from './tools/fetchWebPageTool';
 
 const PROVIDER_VENDOR_ID = 'openrouter-maestro';
 
@@ -140,6 +141,11 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.lm.registerLanguageModelChatProvider(PROVIDER_VENDOR_ID, openRouterProvider)
+  );
+
+  // Copilot's fetch_webpage needs an active Copilot subscription; this one does not.
+  context.subscriptions.push(
+    vscode.lm.registerTool(FETCH_TOOL_NAME, new FetchWebPageTool())
   );
 
   // Create status bar item for token usage stats
