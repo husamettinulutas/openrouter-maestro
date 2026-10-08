@@ -3,6 +3,21 @@
 All notable changes to **OpenRouter Maestro** are documented here.
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [1.3.0]
+
+**Copilot without a Copilot subscription.** Several Copilot features call GitHub's own services and fail, or are missing, without a paid plan. Maestro now provides each of them through OpenRouter. These changes come from OpenRouter Copilot Model Manager 1.2.1–1.3.0; the README has a table of what is covered.
+
+- **Web fetch.** A **Fetch Web Page (Maestro)** tool (`#maestroFetch`) reads pages itself. Copilot's own fetch fails with *"Your subscription has ended"* once a plan has lapsed.
+- **Web search.** **OpenRouter Maestro: Toggle Web Search** lets Copilot models that call tools search the web through OpenRouter, with the sources listed under the answer. Exa by default (about $0.007 per search); Parallel is cheaper but returned results months old in tests. If a provider refuses web search, the request goes through without it.
+- **Semantic code search.** A **Codebase Search (Maestro)** tool (`#maestroCodebase`) finds code by meaning, which Copilot's `#codebase` no longer offers to OpenRouter models. It asks before the first index, keeps the index on your machine and never sends `.env` or key files.
+- **Chat titles, commit messages and edit repair.** **OpenRouter Maestro: Choose Utility Model for Copilot** points Copilot's utility models at a small OpenRouter model. Maestro offers this once and never replaces a utility model you chose yourself without asking.
+- **Inline suggestions.** **OpenRouter Maestro: Toggle Inline Completions** turns on ghost-text suggestions from an OpenRouter model (Codestral by default). Off by default: every suggestion is a paid request.
+- **See which model answered.** With a router such as `openrouter/auto`, the status bar names the model that answered and its provider, and the cost shown is the one OpenRouter billed.
+- **Routers show "Varies"** instead of a broken negative price, and sort last by price.
+- **Tool results reach the model intact.** Structured (prompt-tsx) tool output no longer arrives as `[object Object]`, and images returned by tools go to vision models.
+- **API key from the environment.** When no key is stored, Maestro uses `OPENROUTER_API_KEY`.
+- Claude Code and Codex are unchanged: their own web search and fetch already work through OpenRouter as Maestro configures them.
+
 ## [1.2.1]
 
 - Ships the 1.2.0 redesign together with the 1.1.1 fixes: 402 auto-recovery on a low balance, the `openrouterMaestro.claudeCode.maxOutputTokens` and `openrouterMaestro.enableStreamUsage` settings, tool-argument validation and the 900K `maxInputTokens` clamp. No other changes.

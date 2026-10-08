@@ -90,7 +90,7 @@ Maestro registers a VS Code language-model provider (vendor `openrouter-maestro`
 - **reasoning / thinking** content rendering,
 - automatic **prompt caching** (`cache_control`), which cuts Anthropic input costs sharply in agent mode,
 - **base64 sanitization**, so long encoded blobs don't trip OpenRouter's guardrails,
-- retry with backoff on 429/5xx, a request timeout, and a status-bar token/cost readout.
+- retry with backoff on 429/5xx, a request timeout, and a status-bar token/cost readout that names the model a router such as `openrouter/auto` actually picked.
 
 </details>
 
@@ -150,6 +150,23 @@ On Windows the API key is also persisted as a user environment variable, because
 
 </details>
 
+## Copilot without a Copilot subscription
+
+Copilot Chat works with Maestro's models without a paid Copilot plan, but several Copilot features call GitHub's own services and fail or disappear without one. Maestro replaces them through OpenRouter:
+
+| Copilot feature | Without a subscription | What Maestro adds |
+| --- | --- | --- |
+| Fetch a web page (`#fetch`) | Fails with *"Your subscription has ended"* when you are signed in with a lapsed plan | **Fetch Web Page (Maestro)** tool, `#maestroFetch`. On by default. |
+| Web search | Copilot has none for OpenRouter models | OpenRouter web search with sources under the answer. Run **OpenRouter Maestro: Toggle Web Search**. About $0.007 per search with Exa. |
+| Semantic code search (`#codebase`) | Not offered to OpenRouter models | **Codebase Search (Maestro)** tool, `#maestroCodebase`. The first use asks before indexing the workspace; indexing a typical repository costs under a cent. `.env` and key files are never sent. |
+| Chat titles, commit messages, rename suggestions, repairing failed edits | Fail, or quietly do nothing | **OpenRouter Maestro: Choose Utility Model for Copilot** (Maestro also offers it once) points `chat.utilityModel` and `chat.utilitySmallModel` at a small OpenRouter model. |
+| Inline suggestions (ghost text) | Not available | **OpenRouter Maestro: Toggle Inline Completions**. Off by default, because every suggestion is a paid request. |
+| Searching other GitHub repositories (`github_repo`) | Fails | Not covered. Add the [GitHub MCP server](https://github.com/github/github-mcp-server) with a personal access token. |
+
+**If your Copilot subscription has ended, sign out of GitHub in VS Code** (Accounts menu → Sign Out). Copilot treats a signed-in account without a plan more strictly than no account at all.
+
+**Claude Code and Codex need none of this.** Their own web search and web fetch tools work through OpenRouter as Maestro configures them, also with non-Anthropic and non-OpenAI models (tested with Claude Code 2.1.294 and Codex 0.161 on DeepSeek V4 Flash). Codex lists the search as part of the answer rather than as a separate step.
+
 ## Good to know
 
 - **Uninstalling the extension does not undo the agent configs.** VS Code runs no extension code on uninstall. Switch Claude Code and Codex back to their own model *before* uninstalling (or restore the `.maestro-backup` files by hand).
@@ -178,6 +195,15 @@ VS Code's built-in BYOK has included OpenRouter since 2026, but it hides `:free`
 | `openrouterMaestro.requestTimeoutSeconds` / `maxRetries` | `60` / `3` | Copilot request resilience |
 | `openrouterMaestro.cache.ttlMinutes` | `60` | Model-list cache TTL |
 | `openrouterMaestro.logLevel` | `info` | Output-channel verbosity |
+| `openrouterMaestro.utilityModel` | *(none)* | OpenRouter model Copilot uses for chat titles, commit messages and edit repair; set it with the command |
+| `openrouterMaestro.webSearch.enabled` | `false` | Let Copilot models that call tools search the web |
+| `openrouterMaestro.webSearch.engine` | `exa` | `exa` (about $0.007 per search), `parallel` (about $0.001, results can be stale), `native` or `auto` |
+| `openrouterMaestro.webSearch.maxResults` / `showSources` | `3` / `true` | Results per search; list the pages an answer used |
+| `openrouterMaestro.codebaseSearch.embeddingModel` | `openai/text-embedding-3-small` | Embedding model for codebase search |
+| `openrouterMaestro.codebaseSearch.maxFiles` | `3000` | Most files to index per workspace |
+| `openrouterMaestro.inlineCompletions.enabled` / `model` / `debounceMs` | `false` / `mistralai/codestral-2508` / `350` | Inline suggestions from OpenRouter |
+
+When no key is stored, Maestro reads the `OPENROUTER_API_KEY` environment variable (the one the Codex integration sets on Windows).
 
 ## Development
 
