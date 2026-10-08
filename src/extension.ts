@@ -10,8 +10,19 @@ import { ClaudeCodeIntegration } from './integrations/claudeCode';
 import { CodexIntegration } from './integrations/codex';
 import { AgentTarget } from './types/models';
 import { FETCH_TOOL_NAME, FetchWebPageTool } from './tools/fetchWebPageTool';
+import { CODEBASE_TOOL_NAME, CodebaseSearchTool } from './tools/codebaseSearchTool';
+import { CodebaseIndex } from './codebase/codebaseIndex';
+import { OpenRouterInlineCompletionProvider } from './inline/inlineCompletionProvider';
+import { chooseUtilityModel, offerUtilityModel } from './features/utilityModels';
+import { PROVIDER_VENDOR_ID } from './utils/utilityModel';
 
-const PROVIDER_VENDOR_ID = 'openrouter-maestro';
+/** Flip a boolean setting globally and say what it does now. */
+async function toggleSetting(key: string, on: string, off: string): Promise<void> {
+  const config = vscode.workspace.getConfiguration('openrouterMaestro');
+  const next = !config.get<boolean>(key, false);
+  await config.update(key, next, vscode.ConfigurationTarget.Global);
+  vscode.window.showInformationMessage(next ? on : off);
+}
 
 /**
  * Ensure `chat.byokUtilityModelDefault` is configured so Copilot can perform
@@ -148,6 +159,74 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.lm.registerTool(FETCH_TOOL_NAME, new FetchWebPageTool())
   );
 
+  // Semantic code search: Copilot's #codebase is not offered to BYOK models.
+  const codebaseIndex = new CodebaseIndex(context.storageUri, () => secrets.getApiKey());
+  context.subscriptions.push(
+    vscode.lm.registerTool(CODEBASE_TOOL_NAME, new CodebaseSearchTool(codebaseIndex))
+  );
+
+  // Inline completions: Copilot's need a Copilot subscription. Off by default.
+  context.subscriptions.push(
+    vscode.languages.registerInlineCompletionItemProvider(
+      { pattern: '**' },
+      new OpenRouterInlineCompletionProvider(() => secrets.getApiKey(), cache)
+    )
+  );
+
+  // The provider offers the utility model to Copilot, so changes must reach it.
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration('openrouterMaestro.utilityModel')) {
+        openRouterProvider.refresh();
+      }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('openrouterMaestro.chooseUtilityModel', () =>
+      chooseUtilityModel(cache, context.globalState)
+    ),
+    vscode.commands.registerCommand('openrouterMaestro.toggleWebSearch', () =>
+      toggleSetting(
+        'webSearch.enabled',
+        'Maestro web search is on: models that call tools can search the web while answering (about $0.007 per search with the default engine, Exa).',
+        'Maestro web search is off.'
+      )
+    ),
+    vscode.commands.registerCommand('openrouterMaestro.toggleInlineCompletions', () =>
+      toggleSetting(
+        'inlineCompletions.enabled',
+        'Maestro inline completions are on. Each suggestion is a paid request; pick the model with openrouterMaestro.inlineCompletions.model.',
+        'Maestro inline completions are off.'
+      )
+    ),
+    vscode.commands.registerCommand('openrouterMaestro.rebuildCodebaseIndex', async () => {
+      try {
+        await codebaseIndex.clear();
+        const result = await vscode.window.withProgress(
+          { location: vscode.ProgressLocation.Notification, title: 'OpenRouter Maestro: indexing the workspace', cancellable: true },
+          (progress, token) => {
+            let last = 0;
+            return codebaseIndex.update(token, (done, total) => {
+              const percent = total ? Math.round((done / total) * 100) : 100;
+              progress.report({ increment: percent - last, message: `${done} / ${total} chunks` });
+              last = percent;
+            }, true);
+          }
+        );
+        vscode.window.showInformationMessage(
+          `Indexed ${result.embeddedFiles} files for semantic search ($${result.cost.toFixed(4)}).`
+        );
+      } catch (error) {
+        vscode.window.showErrorMessage(`Indexing failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }),
+    vscode.commands.registerCommand('openrouterMaestro.clearCodebaseIndex', async () => {
+      await codebaseIndex.clear();
+      vscode.window.showInformationMessage('Deleted the semantic search index of this workspace.');
+    })
+  );
+
   // Create status bar item for token usage stats
   const usageStatusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 50);
   usageStatusBar.name = 'OpenRouter Token Usage';
@@ -264,10 +343,11 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   // Load cache on startup (silent, no network)
-  cache.loadFromDisk().then((models) => {
+  cache.loadFromDisk().then(async (models) => {
     if (models.length > 0) {
       Logger.info(`Loaded ${models.length} cached models on startup`);
       openRouterProvider.refresh();
+      await offerUtilityModel(cache, context.globalState, await secrets.hasApiKey());
     }
   });
 

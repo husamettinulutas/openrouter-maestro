@@ -27,7 +27,9 @@ export class SecretsManager {
     // Backward compatibility with previously stored chat namespace keys.
     const legacy = await this.secretStorage.get(CHAT_SECRET_KEY);
     if (!legacy) {
-      return undefined;
+      // Last resort: the key from the environment (CI, dev containers, tests).
+      const fromEnv = normalizeApiKey(process.env.OPENROUTER_API_KEY ?? '');
+      return fromEnv || undefined;
     }
 
     const normalizedLegacy = normalizeApiKey(legacy);

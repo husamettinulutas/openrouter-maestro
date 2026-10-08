@@ -18,3 +18,7 @@ Thumbs.db
 
 # TypeScript cache
 *.tsbuildinfo
+
+# Local API keys (never commit)
+*.key
+.env

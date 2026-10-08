@@ -8,6 +8,7 @@ import { normalizeApiKey } from '../utils/apiKeyUtils';
 import { getAttributionHeaders } from '../utils/branding';
 import { flattenToolResultContent } from '../utils/toolResultContent';
 import { describeServedModel, shortModelName } from '../utils/servedModel';
+import { buildWebSearchTool, collectCitations, formatSources, normalizeEngine, UrlCitation } from '../utils/webSearch';
 import {
   buildThinkingEffortSchema,
   resolveReasoningEffort,
@@ -138,8 +139,15 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
       selected.some((s) => s.id === m.id && s.enabled),
     );
 
+    // The utility model (titles, commit messages) is offered to Copilot even
+    // when it is not in the picker, so chat.utilityModel can resolve it.
+    const utilityId = getConfig<string | null>('utilityModel', null);
+    const utilityModel = utilityId && !activeModels.some((m) => m.id === utilityId)
+      ? this.cache.getModel(utilityId)
+      : undefined;
+
     const globalDefault = getConfig<string | null>('defaultReasoningEffort', null);
-    return activeModels.map((m) => {
+    const infos: vscode.LanguageModelChatInformation[] = activeModels.map((m) => {
       const selectedEntry = selected.find((s) => s.id === m.id);
       const effortDefault = selectedEntry?.reasoningEffort || globalDefault || undefined;
       return {
@@ -168,6 +176,25 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
           : {}),
       };
     });
+    if (utilityModel) {
+      const maxOutput = utilityModel.maxOutputTokens || 4096;
+      infos.push({
+        id: utilityModel.id,
+        name: `${utilityModel.name} (utility)`,
+        family: 'OpenRouter',
+        version: '1.0.0',
+        maxInputTokens: this.calculateMaxInputTokens(utilityModel.contextLength, maxOutput),
+        maxOutputTokens: maxOutput,
+        tooltip: `${utilityModel.id}\nCopilot uses it for chat titles, commit messages and other small tasks.`,
+        capabilities: {
+          imageInput: utilityModel.capabilities.vision,
+          toolCalling: utilityModel.capabilities.toolCalling,
+        },
+        isUserSelectable: false,
+        isBYOK: true,
+      } as vscode.LanguageModelChatInformation);
+    }
+    return infos;
   }
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -213,6 +240,7 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
 
     // Build tool definitions
     const { tools, toolChoice } = this.buildToolDefinitions(_options);
+    const serverTools = this.buildServerTools(model, tools);
 
     // Resolve thinking effort: Copilot picker → per-model override → global setting → catalog default
     const selectedModels = this.globalState.get<SelectedModel[]>('openrouter-selected-models') || [];
@@ -228,7 +256,7 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
     );
 
     // Build request body (with model parameters from settings)
-    const requestBody = this.buildRequestBody(model.id, formattedMessages, tools, toolChoice, reasoningEffort);
+    const requestBody = this.buildRequestBody(model.id, formattedMessages, tools, toolChoice, reasoningEffort, serverTools);
 
     // Warn about very large request bodies that may cause invalid_json errors
     const bodySize = JSON.stringify(requestBody).length;
@@ -241,11 +269,25 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
     const timeoutSeconds = getConfig<number>('requestTimeoutSeconds', 60);
 
     Logger.info(
-      `Sending request to OpenRouter: model=${model.id}, messages=${formattedMessages.length}, tools=${tools?.length || 0}, bodySize=${(bodySize / 1024).toFixed(0)}KB, effort=${reasoningEffort ?? 'default'}`,
+      `Sending request to OpenRouter: model=${model.id}, messages=${formattedMessages.length}, tools=${tools?.length || 0}` +
+      `${serverTools.length ? ' + web search' : ''}, bodySize=${(bodySize / 1024).toFixed(0)}KB, effort=${reasoningEffort ?? 'default'}`,
     );
 
     try {
-      await this.makeRequestWithRetry(requestBody, apiKey, progress, token, maxRetries, timeoutSeconds);
+      try {
+        // With web search on, a rejection is not shown yet: some endpoints refuse
+        // server tools, and the same request without them should still work.
+        await this.makeRequestWithRetry(requestBody, apiKey, progress, token, maxRetries, timeoutSeconds, serverTools.length > 0);
+      } catch (err: any) {
+        if (!serverTools.length || token.isCancellationRequested || !(err instanceof OpenRouterRequestError)) { throw err; }
+        if (err.statusCode !== undefined && [400, 404, 422].includes(err.statusCode)) {
+          Logger.warn(`Request with web search was rejected (HTTP ${err.statusCode}); retrying without web search. ${err.details ?? ''}`);
+          const plainBody = this.buildRequestBody(model.id, formattedMessages, tools, toolChoice, reasoningEffort, []);
+          await this.makeRequestWithRetry(plainBody, apiKey, progress, token, maxRetries, timeoutSeconds);
+        } else {
+          throw err;
+        }
+      }
     } catch (err: any) {
       // Cancellation is not an error
       if (token.isCancellationRequested) { return; }
@@ -292,7 +334,7 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
               '\n🛡️ Request blocked by OpenRouter guardrails — retrying once with base64 content removed...\n',
             ),
           );
-          const retryBody = this.buildRequestBody(model.id, cleaned, tools, toolChoice, reasoningEffort);
+          const retryBody = this.buildRequestBody(model.id, cleaned, tools, toolChoice, reasoningEffort, serverTools);
           try {
             await this.makeRequestWithRetry(retryBody, apiKey, progress, token, 0, timeoutSeconds);
             return;
@@ -632,6 +674,24 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
     return { tools, toolChoice };
   }
 
+  /**
+   * OpenRouter server tools to add to the request. Web search goes only to
+   * models that call tools, and only in requests that already carry tools:
+   * chat turns, not Copilot's tool-less utility calls such as titles.
+   */
+  private buildServerTools(
+    model: vscode.LanguageModelChatInformation,
+    tools: any[] | undefined,
+  ): Record<string, unknown>[] {
+    if (!getConfig<boolean>('webSearch.enabled', false) || !model.capabilities?.toolCalling || !tools?.length) {
+      return [];
+    }
+    return [buildWebSearchTool({
+      engine: normalizeEngine(getConfig<string>('webSearch.engine', 'exa')),
+      maxResults: getConfig<number>('webSearch.maxResults', 3),
+    })];
+  }
+
   // ────────────────────────────────────────────────────────────────────────────
   // Request body
   // ────────────────────────────────────────────────────────────────────────────
@@ -643,6 +703,7 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
     tools: any[] | undefined,
     toolChoice: string | undefined,
     reasoningEffort?: string,
+    serverTools: Record<string, unknown>[] = [],
   ): any {
     const body: any = {
       model: modelId,
@@ -672,7 +733,7 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
     }
 
     if (tools && tools.length > 0) {
-      body.tools = tools;
+      body.tools = [...tools, ...serverTools];
       body.tool_choice = toolChoice;
     }
 
@@ -706,6 +767,7 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
     token: vscode.CancellationToken,
     maxRetries: number,
     timeoutSeconds: number,
+    quietHttpErrors = false,
   ): Promise<void> {
     let lastError: Error | undefined;
 
@@ -713,7 +775,7 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
       if (token.isCancellationRequested) { return; }
 
       try {
-        return await this.makeStreamingRequest(requestBody, apiKey, progress, token, timeoutSeconds);
+        return await this.makeStreamingRequest(requestBody, apiKey, progress, token, timeoutSeconds, quietHttpErrors);
       } catch (err: any) {
         lastError = err;
 
@@ -767,6 +829,7 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
     progress: vscode.Progress<vscode.LanguageModelResponsePart>,
     token: vscode.CancellationToken,
     timeoutSeconds: number,
+    quietHttpErrors = false,
   ): Promise<void> {
     const bodyData = JSON.stringify(requestBody);
     const apiEndpoint = getConfig<string>('apiEndpoint', 'https://openrouter.ai/api/v1');
@@ -829,10 +892,10 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
               error.details = fullError;
 
               // Errors the caller can recover from (guardrail strip, max_tokens
-              // refit) stay off the response stream until that retry has also
-              // failed — otherwise a successful retry is preceded by a scary
-              // error dump.
-              if (!isGuardrail && affordable === undefined) {
+              // refit, retry without web search) stay off the response stream
+              // until that retry has also failed — otherwise a successful retry
+              // is preceded by a scary error dump.
+              if (!isGuardrail && affordable === undefined && !quietHttpErrors) {
                 progress.report(new vscode.LanguageModelTextPart(friendly + '\n\nDetails: ' + fullError));
                 error.reported = true;
               }
@@ -850,6 +913,14 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
           // requestBody.model for routers such as openrouter/auto)
           let servedModel: string | undefined;
           let servedProvider: string | undefined;
+          // Web search results cited in this answer (url_citation annotations)
+          const citations = new Map<string, UrlCitation>();
+          let sourcesReported = false;
+          const reportSources = () => {
+            if (sourcesReported || citations.size === 0 || !getConfig<boolean>('webSearch.showSources', true)) { return; }
+            sourcesReported = true;
+            progress.report(new vscode.LanguageModelTextPart(formatSources(citations.values())));
+          };
 
           res.on('data', (chunk) => {
             buffer += chunk.toString();
@@ -863,6 +934,7 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
               const dataStr = trimmed.slice(6).trim();
               if (dataStr === '[DONE]') {
                 // Emit any remaining tool calls (some models send finish_reason before [DONE])
+                reportSources();
                 this.emitPendingToolCalls(pendingToolCalls, progress);
                 continue;
               }
@@ -890,6 +962,11 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
                   progress.report(new vscode.LanguageModelTextPart(delta.content));
                 }
 
+                // ── Web search sources ──
+                if (delta?.annotations) {
+                  collectCitations(citations, delta.annotations);
+                }
+
                 // ── Tool call deltas (streamed incrementally) ──
                 if (delta?.tool_calls) {
                   for (const tc of delta.tool_calls) {
@@ -905,6 +982,9 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
                 }
 
                 // When finish_reason indicates tool calls are complete, emit them
+                if (finishReason) {
+                  reportSources();
+                }
                 if (finishReason === 'tool_calls') {
                   this.emitPendingToolCalls(pendingToolCalls, progress);
                 }
@@ -916,6 +996,7 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
 
           res.on('end', () => {
             // Emit any remaining tool calls that weren't emitted
+            reportSources();
             this.emitPendingToolCalls(pendingToolCalls, progress);
 
             // Update usage stats in status bar
@@ -1104,7 +1185,9 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
     }
 
     const cachedText = cached > 0 ? ` (${cached} cached)` : '';
-    Logger.info(`Usage [${modelId}${servedText}]: ${prompt} prompt${cachedText} + ${completion} completion = ${total} total tokens${costText}`);
+    const searches = usage.server_tool_use_details?.web_search_requests ?? usage.server_tool_use?.web_search_requests ?? 0;
+    const searchText = searches > 0 ? `, ${searches} web search${searches === 1 ? '' : 'es'}` : '';
+    Logger.info(`Usage [${modelId}${servedText}]: ${prompt} prompt${cachedText} + ${completion} completion = ${total} total tokens${costText}${searchText}`);
 
     if (this._usageStatusBar) {
       const inline = served.showInline && served.served ? ` · ${shortModelName(served.served)}` : '';
@@ -1113,7 +1196,8 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
         `Last request: ${prompt} input${cachedText} + ${completion} output = ${total} total tokens${costTooltip}` +
         `\nModel: ${modelId}` +
         (served.served ? `\nAnswered by: ${served.served}` : '') +
-        (served.provider ? `\nProvider: ${served.provider}` : '');
+        (served.provider ? `\nProvider: ${served.provider}` : '') +
+        (searches > 0 ? `\nWeb searches: ${searches}` : '');
       this._usageStatusBar.show();
     }
   }

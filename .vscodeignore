@@ -11,3 +11,5 @@ media/**
 *.vsix
 !dist/**
 !webview/**
+*.key
+.env
