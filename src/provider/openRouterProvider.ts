@@ -9,6 +9,8 @@ import { getAttributionHeaders } from '../utils/branding';
 import { flattenToolResultContent } from '../utils/toolResultContent';
 import { describeServedModel, shortModelName } from '../utils/servedModel';
 import { buildWebSearchTool, collectCitations, formatSources, normalizeEngine, UrlCitation } from '../utils/webSearch';
+import { withoutCopilotFetch } from '../utils/toolReplacement';
+import { FETCH_TOOL_NAME } from '../tools/fetchWebPageTool';
 import {
   buildThinkingEffortSchema,
   resolveReasoningEffort,
@@ -239,7 +241,7 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
     }
 
     // Build tool definitions
-    const { tools, toolChoice } = this.buildToolDefinitions(_options);
+    const { tools, toolChoice } = this.buildToolDefinitions(this.preferOwnFetchTool(_options, messages));
     const serverTools = this.buildServerTools(model, tools);
 
     // Resolve thinking effort: Copilot picker → per-model override → global setting → catalog default
@@ -647,6 +649,31 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
   // ────────────────────────────────────────────────────────────────────────────
   // Tool definitions
   // ────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Leave Copilot's fetch_webpage out when this extension's fetch tool is
+   * offered too: Copilot's fails for users signed in without a Copilot plan.
+   */
+  private preferOwnFetchTool(
+    options: vscode.ProvideLanguageModelChatResponseOptions,
+    messages: readonly vscode.LanguageModelChatRequestMessage[],
+  ): vscode.ProvideLanguageModelChatResponseOptions {
+    if (!options.tools?.length || !getConfig<boolean>('replaceCopilotFetch', true)) {
+      return options;
+    }
+    const called = new Set<string>();
+    for (const message of messages) {
+      for (const part of message.content) {
+        if (this.isToolCallPart(part)) { called.add(part.name); }
+      }
+    }
+    const tools = withoutCopilotFetch(options.tools, FETCH_TOOL_NAME, called);
+    if (tools.length === options.tools.length) {
+      return options;
+    }
+    Logger.debug(`Left out Copilot's fetch_webpage in favour of ${FETCH_TOOL_NAME}`);
+    return { ...options, tools };
+  }
 
   /** Convert VS Code tool definitions to OpenRouter/OpenAI format. */
   private buildToolDefinitions(options: vscode.ProvideLanguageModelChatResponseOptions): {

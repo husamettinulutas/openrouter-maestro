@@ -16,7 +16,8 @@ import {
  * without a Copilot subscription.
  */
 
-const PROMPT_DISMISSED_KEY = 'openrouter-utility-model-prompt-dismissed';
+/** Set once the offer was shown; the value name predates "shown once" and is kept for existing installs. */
+const PROMPT_SHOWN_KEY = 'openrouter-utility-model-prompt-dismissed';
 
 function chatSetting(name: string): unknown {
   const inspected = vscode.workspace.getConfiguration('chat').inspect(name);
@@ -126,33 +127,38 @@ export async function chooseUtilityModel(cache: ModelCache, globalState: vscode.
 }
 
 /**
- * Once per install: offer to set a utility model when none is configured.
+ * Offer, once per install, to set a utility model when none is configured.
  * Without one, BYOK users without a Copilot subscription get errors for
  * commit messages and chat titles, and failed edits are not repaired.
+ *
+ * Marked as shown before it appears: a notification that is closed or that
+ * slides into the notification center unanswered must not come back in every
+ * window and every new project.
  */
 export async function offerUtilityModel(cache: ModelCache, globalState: vscode.Memento, hasApiKey: boolean): Promise<void> {
-  if (!hasApiKey || globalState.get<boolean>(PROMPT_DISMISSED_KEY) || currentUtilityModel()) {
+  if (!hasApiKey || globalState.get<boolean>(PROMPT_SHOWN_KEY) || currentUtilityModel()) {
     return;
   }
   if (UTILITY_SETTINGS.some(name => !isOursOrEmpty(chatSetting(name)))) {
     return; // the user already chose a utility model elsewhere
   }
+  // Only someone who uses OpenRouter models in Copilot needs one.
+  const usesOurModels = (globalState.get<SelectedModel[]>('openrouter-selected-models') || []).some(s => s.enabled);
   const suggested = RECOMMENDED_UTILITY_MODELS.find(id => cache.getModel(id));
-  if (!suggested) {
+  if (!usesOurModels || !suggested) {
     return;
   }
+  await globalState.update(PROMPT_SHOWN_KEY, true);
   const use = `Use ${suggested}`;
   const answer = await vscode.window.showInformationMessage(
     'Without a Copilot subscription, Copilot cannot write chat titles or commit messages, or repair failed edits. ' +
-    `Use a small OpenRouter model for these (${suggested}, a fraction of a cent per task)?`,
-    use, 'Choose model…', "Don't ask again",
+    `Use a small OpenRouter model for these (${suggested}, a fraction of a cent per task)? ` +
+    'You will not be asked again; "OpenRouter Maestro: Choose Utility Model for Copilot" sets it any time.',
+    use, 'Choose model…',
   );
   if (answer === use) {
     await applyUtilityModel(suggested);
   } else if (answer === 'Choose model…') {
     await chooseUtilityModel(cache, globalState);
-  }
-  if (answer) {
-    await globalState.update(PROMPT_DISMISSED_KEY, true);
   }
 }

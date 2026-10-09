@@ -316,6 +316,11 @@
           "default": null,
           "markdownDescription": "OpenRouter model Copilot uses for chat titles, commit messages, rename suggestions and repairing failed edits. Copilot's own utility models need a Copilot subscription. Set it with the **OpenRouter Maestro: Choose Utility Model for Copilot** command, which also writes `chat.utilityModel` and `chat.utilitySmallModel`."
         },
+        "openrouterMaestro.replaceCopilotFetch": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Leave Copilot's own `fetch_webpage` tool out of requests to Maestro's models whenever **Fetch Web Page (Maestro)** is available. Copilot's fails for anyone signed in to GitHub without an active Copilot plan, and models often pick it first."
+        },
         "openrouterMaestro.webSearch.enabled": {
           "type": "boolean",
           "default": false,
@@ -405,7 +410,7 @@
     "compile": "tsc --noEmit",
     "watch": "node esbuild.js --watch",
     "package": "npx @vscode/vsce package --no-dependencies",
-    "test": "npx --yes tsx --test src/__tests__/apiKeyUtils.test.ts src/__tests__/tokenEstimation.test.ts src/__tests__/reasoningEffort.test.ts src/__tests__/toolResultContent.test.ts src/__tests__/servedModel.test.ts src/__tests__/htmlToText.test.ts src/__tests__/webSearch.test.ts src/__tests__/utilityModel.test.ts src/__tests__/codebase.test.ts src/__tests__/completionPrompt.test.ts"
+    "test": "npx --yes tsx --test src/__tests__/apiKeyUtils.test.ts src/__tests__/tokenEstimation.test.ts src/__tests__/reasoningEffort.test.ts src/__tests__/toolResultContent.test.ts src/__tests__/servedModel.test.ts src/__tests__/htmlToText.test.ts src/__tests__/webSearch.test.ts src/__tests__/utilityModel.test.ts src/__tests__/codebase.test.ts src/__tests__/completionPrompt.test.ts src/__tests__/toolReplacement.test.ts"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
