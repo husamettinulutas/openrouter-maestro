@@ -3,6 +3,11 @@
 All notable changes to **OpenRouter Maestro** are documented here.
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [1.3.1]
+
+- **Web fetch works while you are signed in without a Copilot plan.** Models often picked Copilot's own `fetch_webpage` tool, which fails with *"Your subscription has ended"* for a signed-in account whose plan has lapsed, so signing out of GitHub was the only fix. When **Fetch Web Page (Maestro)** is available, Copilot's fetch tool is now left out of requests to Maestro's models. Turn this off with `openrouterMaestro.replaceCopilotFetch`.
+- **The utility model offer appears once.** It used to come back in every window and every new project until you clicked **Don't ask again**, because a notification closed or left unanswered did not count. It is now shown once per install, and only once you use Maestro's models in Copilot. **OpenRouter Maestro: Choose Utility Model for Copilot** sets it any time.
+
 ## [1.3.0]
 
 **Copilot without a Copilot subscription.** Several Copilot features call GitHub's own services and fail, or are missing, without a paid plan. Maestro now provides each of them through OpenRouter. These changes come from OpenRouter Copilot Model Manager 1.2.1–1.3.0; the README has a table of what is covered.

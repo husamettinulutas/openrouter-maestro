@@ -156,14 +156,14 @@ Copilot Chat works with Maestro's models without a paid Copilot plan, but severa
 
 | Copilot feature | Without a subscription | What Maestro adds |
 | --- | --- | --- |
-| Fetch a web page (`#fetch`) | Fails with *"Your subscription has ended"* when you are signed in with a lapsed plan | **Fetch Web Page (Maestro)** tool, `#maestroFetch`. On by default. |
+| Fetch a web page (`#fetch`) | Fails with *"Your subscription has ended"* when you are signed in with a lapsed plan | **Fetch Web Page (Maestro)** tool, `#maestroFetch`. On by default, and Copilot's own fetch tool is left out of requests so models cannot pick the one that fails (`replaceCopilotFetch`). |
 | Web search | Copilot has none for OpenRouter models | OpenRouter web search with sources under the answer. Run **OpenRouter Maestro: Toggle Web Search**. About $0.007 per search with Exa. |
 | Semantic code search (`#codebase`) | Not offered to OpenRouter models | **Codebase Search (Maestro)** tool, `#maestroCodebase`. The first use asks before indexing the workspace; indexing a typical repository costs under a cent. `.env` and key files are never sent. |
 | Chat titles, commit messages, rename suggestions, repairing failed edits | Fail, or quietly do nothing | **OpenRouter Maestro: Choose Utility Model for Copilot** (Maestro also offers it once) points `chat.utilityModel` and `chat.utilitySmallModel` at a small OpenRouter model. |
 | Inline suggestions (ghost text) | Not available | **OpenRouter Maestro: Toggle Inline Completions**. Off by default, because every suggestion is a paid request. |
 | Searching other GitHub repositories (`github_repo`) | Fails | Not covered. Add the [GitHub MCP server](https://github.com/github/github-mcp-server) with a personal access token. |
 
-**If your Copilot subscription has ended, sign out of GitHub in VS Code** (Accounts menu → Sign Out). Copilot treats a signed-in account without a plan more strictly than no account at all.
+**If Copilot still asks for a subscription, sign out of GitHub in VS Code** (Accounts menu → Sign Out). Copilot treats a signed-in account without a plan more strictly than no account at all. Web fetch no longer needs this.
 
 **Claude Code and Codex need none of this.** Their own web search and web fetch tools work through OpenRouter as Maestro configures them, also with non-Anthropic and non-OpenAI models (tested with Claude Code 2.1.294 and Codex 0.161 on DeepSeek V4 Flash). Codex lists the search as part of the answer rather than as a separate step.
 
@@ -196,6 +196,7 @@ VS Code's built-in BYOK has included OpenRouter since 2026, but it hides `:free`
 | `openrouterMaestro.cache.ttlMinutes` | `60` | Model-list cache TTL |
 | `openrouterMaestro.logLevel` | `info` | Output-channel verbosity |
 | `openrouterMaestro.utilityModel` | *(none)* | OpenRouter model Copilot uses for chat titles, commit messages and edit repair; set it with the command |
+| `openrouterMaestro.replaceCopilotFetch` | `true` | Leave Copilot's `fetch_webpage` out of requests when Maestro's fetch tool is available |
 | `openrouterMaestro.webSearch.enabled` | `false` | Let Copilot models that call tools search the web |
 | `openrouterMaestro.webSearch.engine` | `exa` | `exa` (about $0.007 per search), `parallel` (about $0.001, results can be stale), `native` or `auto` |
 | `openrouterMaestro.webSearch.maxResults` / `showSources` | `3` / `true` | Results per search; list the pages an answer used |
