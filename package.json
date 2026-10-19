@@ -410,7 +410,7 @@
     "compile": "tsc --noEmit",
     "watch": "node esbuild.js --watch",
     "package": "npx @vscode/vsce package --no-dependencies",
-    "test": "npx --yes tsx --test src/__tests__/apiKeyUtils.test.ts src/__tests__/tokenEstimation.test.ts src/__tests__/reasoningEffort.test.ts src/__tests__/toolResultContent.test.ts src/__tests__/servedModel.test.ts src/__tests__/htmlToText.test.ts src/__tests__/webSearch.test.ts src/__tests__/utilityModel.test.ts src/__tests__/codebase.test.ts src/__tests__/completionPrompt.test.ts src/__tests__/toolReplacement.test.ts"
+    "test": "npx --yes tsx --test src/__tests__/apiKeyUtils.test.ts src/__tests__/tokenEstimation.test.ts src/__tests__/reasoningEffort.test.ts src/__tests__/toolResultContent.test.ts src/__tests__/servedModel.test.ts src/__tests__/htmlToText.test.ts src/__tests__/webSearch.test.ts src/__tests__/utilityModel.test.ts src/__tests__/codebase.test.ts src/__tests__/completionPrompt.test.ts src/__tests__/toolReplacement.test.ts src/__tests__/dsml.test.ts"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

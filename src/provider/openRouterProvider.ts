@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as https from 'https';
+import { randomUUID } from 'crypto';
 import { ModelCache } from '../cache/modelCache';
 import { SecretsManager } from '../utils/secrets';
 import { Logger } from '../utils/logger';
@@ -10,6 +11,7 @@ import { flattenToolResultContent } from '../utils/toolResultContent';
 import { describeServedModel, shortModelName } from '../utils/servedModel';
 import { buildWebSearchTool, collectCitations, formatSources, normalizeEngine, UrlCitation } from '../utils/webSearch';
 import { withoutCopilotFetch } from '../utils/toolReplacement';
+import { DsmlStreamFilter, paramTypesFromTools } from '../utils/dsml';
 import { FETCH_TOOL_NAME } from '../tools/fetchWebPageTool';
 import {
   buildThinkingEffortSchema,
@@ -942,6 +944,20 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
           let servedProvider: string | undefined;
           // Web search results cited in this answer (url_citation annotations)
           const citations = new Map<string, UrlCitation>();
+          // DeepSeek models sometimes write a tool call as DSML markup in the
+          // text instead of tool_calls deltas; recover it when tools were offered.
+          const functionTools = (requestBody.tools ?? []).filter((t: any) => t?.type === 'function');
+          const dsml = functionTools.length ? new DsmlStreamFilter(paramTypesFromTools(functionTools)) : undefined;
+          const flushDsml = () => {
+            if (!dsml) { return; }
+            const { text, calls } = dsml.flush();
+            if (text) { progress.report(new vscode.LanguageModelTextPart(text)); }
+            for (const call of calls) {
+              const id = `call_${randomUUID().replace(/-/g, '').slice(0, 24)}`;
+              Logger.info(`Emitting tool call recovered from DSML text: ${call.name} (${id})`);
+              progress.report(new vscode.LanguageModelToolCallPart(id, call.name, call.input));
+            }
+          };
           let sourcesReported = false;
           const reportSources = () => {
             if (sourcesReported || citations.size === 0 || !getConfig<boolean>('webSearch.showSources', true)) { return; }
@@ -961,6 +977,7 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
               const dataStr = trimmed.slice(6).trim();
               if (dataStr === '[DONE]') {
                 // Emit any remaining tool calls (some models send finish_reason before [DONE])
+                flushDsml();
                 reportSources();
                 this.emitPendingToolCalls(pendingToolCalls, progress);
                 continue;
@@ -986,7 +1003,8 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
 
                 // ── Text content ──
                 if (delta?.content) {
-                  progress.report(new vscode.LanguageModelTextPart(delta.content));
+                  const visible = dsml ? dsml.push(delta.content) : delta.content;
+                  if (visible) { progress.report(new vscode.LanguageModelTextPart(visible)); }
                 }
 
                 // ── Web search sources ──
@@ -1010,6 +1028,7 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
 
                 // When finish_reason indicates tool calls are complete, emit them
                 if (finishReason) {
+                  flushDsml();
                   reportSources();
                 }
                 if (finishReason === 'tool_calls') {
@@ -1023,6 +1042,7 @@ export class OpenRouterChatProvider implements vscode.LanguageModelChatProvider 
 
           res.on('end', () => {
             // Emit any remaining tool calls that weren't emitted
+            flushDsml();
             reportSources();
             this.emitPendingToolCalls(pendingToolCalls, progress);
 
