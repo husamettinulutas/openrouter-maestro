@@ -3,6 +3,10 @@
 All notable changes to **OpenRouter Maestro** are documented here.
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [1.3.2]
+
+- **DeepSeek tool calls run instead of showing up as markup.** DeepSeek models such as `deepseek/deepseek-v4.1-flash` sometimes write a tool call into the reply as DSML text (`<｜DSML｜invoke name="…">`, `｜calls｜ … ｜/calls｜`) instead of a structured tool call, so the chat showed raw markup and the tool never ran. Maestro now takes that markup out of the reply and runs the call. The older `<｜tool▁calls▁begin｜>` form is handled the same way. Markup that holds no usable call is still shown as is. ([#1](https://github.com/husamettinulutas/openrouter-maestro/issues/1))
+
 ## [1.3.1]
 
 - **Web fetch works while you are signed in without a Copilot plan.** Models often picked Copilot's own `fetch_webpage` tool, which fails with *"Your subscription has ended"* for a signed-in account whose plan has lapsed, so signing out of GitHub was the only fix. When **Fetch Web Page (Maestro)** is available, Copilot's fetch tool is now left out of requests to Maestro's models. Turn this off with `openrouterMaestro.replaceCopilotFetch`.
